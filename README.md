@@ -50,7 +50,8 @@ lib/
   lineColors.ts             couleurs de badge + contraste WCAG
   lineColors.generated.json généré par scripts/build-line-colors.mjs
 public/sw.js                service worker (jamais de cache /api/*)
-scripts/                    build-line-colors.mjs, test-api.mjs
+scripts/                    build-line-colors.mjs, build-icons.mjs, test-api.mjs
+assets/tpg-go-icon.png      image maître des icônes (non servie)
 data/line-colors.overrides.json   couleurs saisies à la main (voir plus bas)
 ```
 
@@ -114,3 +115,25 @@ npm run test:api "Bel-Air"
 1. Pousser le dépôt sur GitHub.
 2. Sur vercel.com : *New Project* → importer le repo → *Deploy* (aucune variable requise).
 3. Sur mobile : ouvrir l'URL → *Ajouter à l'écran d'accueil*.
+
+## Icônes
+
+Toutes les icônes sont générées depuis une seule image maître, `assets/tpg-go-icon.png`
+(squircle orange sur fond blanc, pas besoin de la détourer) :
+
+```bash
+npm run build:icons
+```
+
+Le script détecte le squircle, modélise le dégradé de fond pour le prolonger au-delà du bord,
+puis rend chaque taille :
+
+| Fichier | Usage |
+| --- | --- |
+| `public/icons/icon-{192,512}.png` | manifest `any`, squircle détouré (transparent) |
+| `public/icons/icon-maskable-{192,512}.png` | manifest `maskable`, pleine surface, pictogramme dans la zone sûre (cercle 80 %) |
+| `app/apple-icon.png` (180) | écran d'accueil iOS, opaque (iOS applique son propre masque) |
+| `app/icon.png` (192), `app/favicon.ico` (16/32/48) | favicons |
+
+Après un changement d'icônes, incrémenter `VERSION` dans `public/sw.js` : les icônes y sont
+servies en cache d'abord.

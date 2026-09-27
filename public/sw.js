@@ -2,7 +2,7 @@
 // Rend l'app installable et sa coquille disponible hors-ligne.
 // RÈGLE ABSOLUE : on ne met JAMAIS en cache /api/* (horaires toujours frais).
 
-const VERSION = "tpg-go-v2";
+const VERSION = "tpg-go-v3";
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
 const MAX_ASSETS = 200;
