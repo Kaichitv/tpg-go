@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Import par icône (évite de compiler les ~1500 icônes Phosphor en dev).
+    optimizePackageImports: ["@phosphor-icons/react"],
+  },
   async headers() {
     return [
       {
