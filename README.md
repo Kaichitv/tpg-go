@@ -55,7 +55,7 @@ assets/tpg-go-icon.png      image maître des icônes (non servie)
 data/line-colors.overrides.json   couleurs saisies à la main (voir plus bas)
 ```
 
-- Tous les appels passent par les routes serveur : pas de CORS, cache amont (`revalidate` 20 s
+- Tous les appels passent par les routes serveur : pas de CORS, cache amont à TTL strict (20 s
   pour les passages, 1 h pour les arrêts), API tierce protégée.
 - **Migration OJP** : réécrire `lib/transport.ts` (mêmes fonctions, mêmes types). L'UI ne change pas.
 

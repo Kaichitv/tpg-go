@@ -210,13 +210,42 @@ function timePoint(
 
 // --- Utilitaires ---------------------------------------------------------------------
 
-async function get<T>(path: string, revalidate: number): Promise<T> {
+// Cache mémoire à TTL strict. On n'utilise PAS `next: { revalidate }` : c'est du
+// stale-while-revalidate, qui sert une réponse périmée (parfois de plusieurs
+// minutes, et persistée sur disque) à la première requête après une période
+// calme — inacceptable pour des horaires. Les requêtes simultanées sur la même
+// URL partagent aussi le même appel amont. Les échecs ne sont pas mis en cache.
+const memo = new Map<string, { expires: number; data: Promise<unknown> }>();
+const MAX_ENTRIES = 500;
+
+function get<T>(path: string, ttlSeconds: number): Promise<T> {
+  const url = `${BASE}${path}`;
+  const now = Date.now();
+  const hit = memo.get(url);
+  if (hit && hit.expires > now) return hit.data as Promise<T>;
+
+  const data = fetchJson<T>(url);
+  memo.set(url, { expires: now + ttlSeconds * 1000, data });
+  data.catch(() => {
+    if (memo.get(url)?.data === data) memo.delete(url);
+  });
+  if (memo.size > MAX_ENTRIES) prune(now);
+  return data;
+}
+
+function prune(now: number) {
+  for (const [k, v] of memo) if (v.expires <= now) memo.delete(k);
+  // Encore trop d'entrées : on retire les plus anciennes (ordre d'insertion).
+  for (const k of memo.keys()) {
+    if (memo.size <= MAX_ENTRIES) break;
+    memo.delete(k);
+  }
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, {
-      headers: { Accept: "application/json" },
-      next: { revalidate },
-    });
+    res = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
   } catch (err) {
     throw new UpstreamError(`Source injoignable : ${String(err)}`);
   }

@@ -5,7 +5,7 @@
 import { errorResponse } from "@/lib/apiResponse";
 import { getDepartures } from "@/lib/transport";
 
-export const dynamic = "force-dynamic"; // le cache est géré par fetch (revalidate)
+export const dynamic = "force-dynamic"; // cache à TTL strict géré dans lib/transport.ts
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
