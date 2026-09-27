@@ -47,8 +47,9 @@ lib/
   favorites.ts              favoris (localStorage + useSyncExternalStore)
   useBoard.ts               polling 30 s (visible uniquement), reprise au premier plan
   progress.ts               progression temporelle d'une course
-  lineColors.ts             couleurs de badge + contraste WCAG
-  lineColors.generated.json généré par scripts/build-line-colors.mjs
+  lineColors.ts             couleurs de badge + contraste WCAG (overrides → snapshot → orange)
+  lineColors.overrides.ts   lignes phares vérifiées à la main, source citée
+  lineColors.fallback.json  snapshot committé, généré par scripts/build-line-colors.mjs
 public/sw.js                service worker (jamais de cache /api/*)
 scripts/                    build-line-colors.mjs, build-icons.mjs, test-api.mjs
 assets/tpg-go-icon.png      image maître des icônes (non servie)
@@ -72,17 +73,27 @@ Le script lit le GTFS statique national sur opentransportdata.swiss :
 - **Authentification** : aucune à ce jour. Si le portail en exige une un jour, définir
   `OTD_API_KEY` (voir `.env.example`), envoyée en `Authorization: Bearer`.
 - Il n'extrait que `agency.txt` et `routes.txt` via des requêtes HTTP Range (~2 s, pas de
-  téléchargement complet), filtre l'agence TPG (`agency_id` 881) et écrit
-  `lib/lineColors.generated.json` (`route_short_name` → `route_color` / `route_text_color`).
-- Le runtime lit ce JSON (rapide, compatible serverless). Le zip n'est jamais parsé en production.
+  téléchargement complet) et filtre l'agence TPG (`agency_id` 881).
+- Les lignes sans `route_color` sont complétées par la **liste officielle des lignes TPG**
+  (`https://www.tpg.ch/fr/lignes`, objet `lignes` de la page : fond + classe de texte
+  « blanc » / « noir »). Le GTFS reste prioritaire.
+- Sorties :
+  - `lib/lineColors.fallback.json` — **snapshot committé**, seul fichier lu par le runtime :
+    `{ "<route_short_name>": { "bg": "#RRGGBB", "text": "#RRGGBB" } }`. Il n'est pas réécrit
+    si tpg.ch est injoignable ;
+  - `lib/lineColors.generated.json` — rapport complet (sources, stats), gitignoré.
+- Le zip n'est jamais parsé en production.
+
+Résolution au runtime (`getLineColor`) : `lib/lineColors.overrides.ts` (lignes phares, chaque
+hex confirmé par une source officielle citée en commentaire) → snapshot → orange TPG `#F59700`.
+Le texte officiel est gardé s'il atteint WCAG AA sur le fond ; sinon, ou s'il manque, on
+calcule le meilleur contraste (quasi-noir / blanc).
 
 > **Limite constatée (sept. 2026)** : le `routes.txt` suisse **ne contient pas** de colonnes
 > `route_color` / `route_text_color` (86 lignes TPG, 0 couleur). Le script les prendra
-> automatiquement dès qu'elles apparaîtront. En attendant :
->
-> - toutes les lignes utilisent l'**orange TPG `#F59700`**, avec un texte de badge choisi pour
->   le contraste (WCAG AA) ;
-> - on peut saisir les couleurs officielles TPG (plan du réseau, charte) dans
+> automatiquement dès qu'elles apparaîtront. En attendant, les couleurs viennent de tpg.ch ;
+> les lignes que tpg.ch ne publie pas (A1–A6, CO, NM, NP, R au 2026-09-27) restent en
+> **orange TPG**. On peut aussi saisir des couleurs officielles TPG (plan du réseau, charte) dans
 >   `data/line-colors.overrides.json`, puis relancer `npm run build:colors`. Format :
 >   `"12": { "bg": "#RRGGBB", "fg": "#RRGGBB" }` (`fg` optionnel, calculé sinon).
 >   N'y mettre que des valeurs issues d'une source officielle.
