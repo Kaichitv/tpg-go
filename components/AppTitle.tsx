@@ -2,14 +2,8 @@
 export default function AppTitle() {
   return (
     <h1 className="flex items-center gap-2.5 text-[34px] leading-none font-bold tracking-tight">
-      <span
-        aria-hidden
-        className="inline-flex size-9 items-center justify-center rounded-[10px] bg-accent text-[15px] font-extrabold text-on-accent shadow-elev-1"
-      >
-        tpg
-      </span>
       <span>
-        TPG <span className="text-accent-ink">Go</span>
+        Rechercher
       </span>
     </h1>
   );
