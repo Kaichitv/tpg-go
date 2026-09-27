@@ -2,80 +2,96 @@
 
 /* ------------------------------------------------------------------------------
    TPG Go — design system
-   Glassmorphisme minimaliste (Apple HIG) · thème auto clair/sombre · accent TPG.
-   Les couleurs sont des variables CSS qui basculent selon prefers-color-scheme ;
-   Tailwind les expose en utilitaires (bg-surface, text-muted, text-late…).
-   Contrastes vérifiés WCAG AA (≥ 4.5:1) pour tout texte, verre composé sur fond + halos.
+   Sombre et sobre, inspiré des Apple HIG · thème auto clair/sombre · accent TPG.
+
+   Élévation : fond plat, puis 4 niveaux de surface. Chaque niveau combine
+   une surface légèrement plus claire (en sombre), un reflet sur l'arête haute
+   et une ombre plus profonde :
+     elev-1  cartes (favoris, tableau des passages)
+     elev-2  contrôles posés (champ de recherche)
+     elev-3  popovers (suggestions de recherche)
+     elev-4  feuilles modales (suivi du trajet)
+   Aucun dégradé ni verre décoratif : les barres collantes deviennent opaques
+   et ombrées quand le contenu défile dessous.
+
+   Contrastes WCAG AA (≥ 4.5:1) vérifiés pour tout texte sur chaque niveau.
    ------------------------------------------------------------------------------ */
 
 :root {
   color-scheme: light dark;
 
-  --bg: #eef0f5;
-  --bg-glow-1: rgb(245 151 0 / 0.2);
-  --bg-glow-2: rgb(88 118 255 / 0.12);
-
-  --surface: rgb(255 255 255 / 0.66);
-  --surface-strong: rgb(255 255 255 / 0.86);
-  --surface-solid: #ffffff;
+  --bg: #e8eaee;
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+  --surface-4: #ffffff;
   --surface-hover: rgb(15 23 42 / 0.045);
   --surface-press: rgb(15 23 42 / 0.08);
-  --hairline: rgb(15 23 42 / 0.1);
-  --highlight: rgb(255 255 255 / 0.7); /* reflet interne du verre */
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px -8px rgb(15 23 42 / 0.12);
-  --shadow-lg: 0 -8px 40px -12px rgb(15 23 42 / 0.25);
-  --scrim: rgb(15 23 42 / 0.28);
+  --hairline: rgb(15 23 42 / 0.08);
+  --highlight: rgb(255 255 255 / 0.9); /* arête haute éclairée */
+
+  --shadow-1: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.1);
+  --shadow-2: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 10px -2px rgb(15 23 42 / 0.12);
+  --shadow-3: 0 4px 8px -4px rgb(15 23 42 / 0.12), 0 16px 32px -8px rgb(15 23 42 / 0.24);
+  --shadow-4: 0 -2px 8px rgb(15 23 42 / 0.06), 0 -16px 48px -12px rgb(15 23 42 / 0.3);
+  --shadow-bar: 0 1px 0 var(--hairline), 0 6px 16px -8px rgb(15 23 42 / 0.2);
+  --scrim: rgb(15 23 42 / 0.36);
 
   --fg: #0b0c0f;
-  --fg-muted: #52535b; /* ≥ 7.0:1 sur surface */
-  --fg-subtle: #676871; /* ≥ 5.0:1 sur surface */
+  --fg-muted: #50525a; /* ≥ 6.4:1 */
+  --fg-subtle: #65676f; /* ≥ 4.6:1 (fond), 5.6:1 (surfaces) */
 
-  --accent: #f59700; /* orange TPG — remplissages, jamais du texte sur clair */
-  --accent-ink: #a14e00; /* orange lisible comme texte : ≥ 5.3:1 sur surface */
+  --accent: #f59700; /* orange TPG — remplissages uniquement en clair */
+  --accent-ink: #a14e00; /* orange lisible en texte : ≥ 4.8:1 */
   --on-accent: #1a1200;
   --focus: #a14e00;
 
-  --late: #b8261a; /* ≥ 5.7:1 sur surface, ≥ 4.9:1 sur late-bg */
+  --late: #b8261a; /* ≥ 5.2:1 */
   --late-bg: rgb(184 38 26 / 0.1);
-  --ontime: #16703a; /* ≥ 5.6:1 sur surface */
+  --ontime: #16703a; /* ≥ 5.1:1 */
 
-  --blur: 24px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #07080b;
-    --bg-glow-1: rgb(245 151 0 / 0.16);
-    --bg-glow-2: rgb(88 118 255 / 0.14);
-
-    --surface: rgb(30 31 37 / 0.6);
-    --surface-strong: rgb(28 29 35 / 0.88);
-    --surface-solid: #1c1d23;
-    --surface-hover: rgb(255 255 255 / 0.05);
-    --surface-press: rgb(255 255 255 / 0.1);
-    --hairline: rgb(255 255 255 / 0.1);
+    --bg: #08090a;
+    --surface-1: #111214;
+    --surface-2: #17181b;
+    --surface-3: #1c1d21;
+    --surface-4: #202125;
+    --surface-hover: rgb(255 255 255 / 0.045);
+    --surface-press: rgb(255 255 255 / 0.09);
+    --hairline: rgb(255 255 255 / 0.07);
     --highlight: rgb(255 255 255 / 0.06);
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -8px rgb(0 0 0 / 0.5);
-    --shadow-lg: 0 -8px 40px -12px rgb(0 0 0 / 0.7);
-    --scrim: rgb(0 0 0 / 0.5);
 
-    --fg: #f4f5f7;
-    --fg-muted: #a9abb4; /* ≥ 7.1:1 sur surface */
-    --fg-subtle: #8f919b; /* ≥ 5.2:1 sur surface */
+    /* Sur fond quasi noir, l'ombre seule se voit peu : elle est plus dense et
+       s'appuie sur le reflet d'arête et la surface plus claire du niveau. */
+    --shadow-1: 0 1px 1px rgb(0 0 0 / 0.5), 0 2px 6px -1px rgb(0 0 0 / 0.5);
+    --shadow-2: 0 1px 2px rgb(0 0 0 / 0.5), 0 6px 14px -4px rgb(0 0 0 / 0.6);
+    --shadow-3: 0 6px 12px -4px rgb(0 0 0 / 0.6), 0 20px 40px -8px rgb(0 0 0 / 0.75);
+    --shadow-4: 0 -1px 0 rgb(255 255 255 / 0.04), 0 -20px 60px -12px rgb(0 0 0 / 0.9);
+    --shadow-bar: 0 1px 0 var(--hairline), 0 8px 20px -8px rgb(0 0 0 / 0.8);
+    --scrim: rgb(0 0 0 / 0.6);
 
-    --accent-ink: #ffa726; /* ≥ 8.4:1 sur surface */
+    --fg: #f3f4f6;
+    --fg-muted: #a8aab3; /* ≥ 6.9:1 */
+    --fg-subtle: #8c8e98; /* ≥ 4.9:1 */
+
+    --accent-ink: #ffa726; /* ≥ 8.2:1 */
     --focus: #ffb547;
 
-    --late: #ff7a6b; /* ≥ 6.4:1 sur surface, ≥ 5.0:1 sur late-bg */
+    --late: #ff7a6b; /* ≥ 6.3:1, ≥ 5.0:1 sur late-bg */
     --late-bg: rgb(255 122 107 / 0.14);
-    --ontime: #5bd88a; /* ≥ 9.0:1 sur surface */
+    --ontime: #5bd88a; /* ≥ 8.9:1 */
   }
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-strong: var(--surface-strong);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
   --color-surface-hover: var(--surface-hover);
   --color-surface-press: var(--surface-press);
   --color-hairline: var(--hairline);
@@ -89,17 +105,25 @@
   --color-late-bg: var(--late-bg);
   --color-ontime: var(--ontime);
 
+  --shadow-elev-1: var(--shadow-1);
+  --shadow-elev-2: var(--shadow-2);
+
   --font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI Variable",
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   --animate-sheet-in: sheet-in 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-fade-in: fade-in 200ms ease-out;
   --animate-pulse-ring: pulse-ring 1.8s ease-out infinite;
 
   @keyframes sheet-in {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+    to { opacity: 1; transform: none; }
   }
   @keyframes fade-in {
     from { opacity: 0; }
@@ -111,37 +135,54 @@
   }
 }
 
-/* Surfaces vitrées : translucide + flou + bordure hairline + ombre douce. */
-@utility glass {
-  background-color: var(--surface);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
+/* --- Niveaux d'élévation ------------------------------------------------------ */
+
+@utility elev-1 {
+  background-color: var(--surface-1);
   border: 1px solid var(--hairline);
-  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-1);
 }
 
-@utility glass-strong {
-  background-color: var(--surface-strong);
-  -webkit-backdrop-filter: blur(calc(var(--blur) * 1.5)) saturate(180%);
-  backdrop-filter: blur(calc(var(--blur) * 1.5)) saturate(180%);
+@utility elev-2 {
+  background-color: var(--surface-2);
   border: 1px solid var(--hairline);
-  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-lg);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-2);
+}
+
+@utility elev-3 {
+  background-color: var(--surface-3);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-3);
+}
+
+@utility elev-4 {
+  background-color: var(--surface-4);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-4);
+}
+
+/* Barre collante : transparente au repos ; une fois décollée, opaque et ombrée
+   (pas de verre : les badges colorés qui défilent dessous feraient des halos). */
+@utility sticky-bar {
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+  &[data-stuck="true"] {
+    background-color: var(--bg);
+    box-shadow: var(--shadow-bar);
+  }
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    background-color: var(--bg);
   }
 
   body {
     min-height: 100dvh;
     background-color: var(--bg);
-    /* Deux halos très doux : donnent de la matière au verre sans nuire au contraste. */
-    background-image:
-      radial-gradient(60rem 40rem at 110% -10%, var(--bg-glow-1), transparent 60%),
-      radial-gradient(50rem 36rem at -20% 30%, var(--bg-glow-2), transparent 60%);
-    background-attachment: fixed;
     color: var(--fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -164,16 +205,13 @@
 
   dialog::backdrop {
     background: var(--scrim);
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
 }
 
-/* Mouvement réduit : pas d'animation, flous atténués. */
+/* Mouvement réduit : pas d'animation, flou du fond de modale retiré. */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --blur: 10px;
-  }
   *,
   *::before,
   *::after {
@@ -188,23 +226,9 @@
   }
 }
 
-/* Transparence réduite (iOS/macOS) : surfaces opaques. */
-@media (prefers-reduced-transparency: reduce) {
-  .glass,
-  .glass-strong {
-    background-color: var(--surface-solid);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
-/* Contraste renforcé : bordures plus marquées. */
+/* Contraste renforcé : bordures marquées. */
 @media (prefers-contrast: more) {
   :root {
     --hairline: color-mix(in srgb, var(--fg) 40%, transparent);
-  }
-  .glass,
-  .glass-strong {
-    background-color: var(--surface-solid);
   }
 }

@@ -38,7 +38,7 @@ app/
   api/locations/route.ts    recherche d'arrêts (?q=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
   manifest.ts, layout.tsx, globals.css (design system)
-components/                 GlassCard, LineBadge, DepartureRow, Departures, StopSearch,
+components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
                             FavStar, TripSheet, FavoriteCard, StatusLine…
 lib/
   types.ts                  modèle de domaine partagé (indépendant de la source)
@@ -92,11 +92,13 @@ Le script lit le GTFS statique national sur opentransportdata.swiss :
 
 ## Design system
 
-Glassmorphisme minimaliste inspiré des Apple HIG, thème clair/sombre automatique
-(`prefers-color-scheme`), accent orange TPG `#F59700`. Tokens dans `app/globals.css`, exposés à
-Tailwind v4. Contrastes AA vérifiés sur le verre composé. Cibles tactiles ≥ 44 px, focus visibles.
-`prefers-reduced-motion` coupe les animations et atténue les flous ; `prefers-reduced-transparency`
-rend les surfaces opaques.
+Sombre et sobre, inspiré des Apple HIG, thème clair/sombre automatique (`prefers-color-scheme`),
+accent orange TPG `#F59700`. Fond plat (ni orbe ni dégradé) et **élévation en 4 niveaux**
+(`elev-1` cartes, `elev-2` champ de recherche, `elev-3` suggestions, `elev-4` feuille de trajet) :
+surface un peu plus claire en sombre, reflet sur l'arête haute, ombre plus profonde. Les barres
+collantes deviennent opaques et ombrées quand le contenu défile dessous. Tokens dans
+`app/globals.css`, exposés à Tailwind v4. Contrastes AA vérifiés sur chaque niveau. Cibles
+tactiles ≥ 44 px, focus visibles, `prefers-reduced-motion` coupe les animations.
 
 ## Tester la source de données sans rien lancer
 

@@ -9,7 +9,7 @@ import { useBoard } from "@/lib/useBoard";
 import BoardSkeleton from "./BoardSkeleton";
 import Departures from "./Departures";
 import FavStar from "./FavStar";
-import GlassCard from "./GlassCard";
+import Card from "./Card";
 import IconButton from "./IconButton";
 
 type Props = {
@@ -31,7 +31,7 @@ export default function FavoriteCard({ favorite, index, count, editing, onMove, 
   const headingId = `fav-${favorite.id}`;
 
   return (
-    <GlassCard as="article" aria-labelledby={headingId} className="overflow-hidden">
+    <Card as="article" aria-labelledby={headingId} className="overflow-hidden">
       <div className="flex items-center gap-1 border-b border-hairline py-1 pr-1.5 pl-4">
         <Link
           href={`/stop/${encodeURIComponent(favorite.id)}?name=${encodeURIComponent(favorite.name)}`}
@@ -84,6 +84,6 @@ export default function FavoriteCard({ favorite, index, count, editing, onMove, 
       {!editing && board && error && (
         <p className="border-t border-hairline px-4 py-2 text-[12px] text-late">{error} · données précédentes</p>
       )}
-    </GlassCard>
+    </Card>
   );
 }

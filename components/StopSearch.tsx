@@ -89,7 +89,7 @@ export default function StopSearch() {
 
   return (
     <div className="relative">
-      <div className="glass flex h-12 items-center gap-2 rounded-2xl pr-1 pl-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus)">
+      <div className="elev-2 flex h-12 items-center gap-2 rounded-2xl pr-1 pl-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus)">
         <MagnifyingGlassIcon size={20} aria-hidden className="shrink-0 text-muted" />
         <input
           ref={inputRef}
@@ -136,7 +136,7 @@ export default function StopSearch() {
       </div>
 
       <div
-        className={`glass-strong absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl ${showList ? "animate-fade-in" : "hidden"}`}
+        className={`elev-3 absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl ${showList ? "animate-pop-in" : "hidden"}`}
       >
         <ul id={listId} role="listbox" aria-label="Arrêts trouvés" className="max-h-[60dvh] overflow-y-auto py-1.5">
           {hits.map((s, i) => (

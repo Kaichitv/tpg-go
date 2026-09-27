@@ -99,7 +99,7 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
       onClick={(e) => {
         if (e.target === dialog.current) dialog.current?.close(); // clic sur le fond
       }}
-      className="glass-strong fixed inset-x-0 top-auto bottom-0 m-0 mx-auto flex max-h-[88dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border-b-0 p-0 text-fg open:animate-sheet-in backdrop:animate-fade-in"
+      className="elev-4 fixed inset-x-0 top-auto bottom-0 m-0 mx-auto flex max-h-[88dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] border-b-0 p-0 text-fg open:animate-sheet-in backdrop:animate-fade-in"
     >
       <header className="shrink-0 border-b border-hairline px-4 pt-2 pb-3">
         <div aria-hidden className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-hairline" />
@@ -121,7 +121,7 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
           </IconButton>
         </div>
 
-        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-surface-hover px-3 py-2 text-[13px] leading-snug text-muted">
+        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-surface-press/60 px-3 py-2 text-[13px] leading-snug text-muted">
           <InfoIcon size={18} aria-hidden className="mt-px shrink-0" />
           <span>
             Progression <strong className="font-semibold text-fg">estimée d’après les horaires</strong>
@@ -214,7 +214,7 @@ function StopItem({ stop, state, first, last, color, now, ref }: ItemProps) {
           className={`relative z-10 my-auto rounded-full border-2 ${current ? "size-4 animate-pulse-ring" : "size-3"}`}
           style={{
             borderColor: passed || current ? color : "var(--fg-subtle)",
-            background: passed ? color : "var(--surface-solid)",
+            background: passed ? color : "var(--surface-4)",
           }}
         />
       </span>
