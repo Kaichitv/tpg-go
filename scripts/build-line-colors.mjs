@@ -28,6 +28,13 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
 
+// Variables optionnelles lues depuis .env s'il existe (voir .env.example).
+try {
+  process.loadEnvFile?.(".env");
+} catch {
+  /* pas de .env : valeurs par défaut */
+}
+
 // Permalink CKAN du jeu « Timetable 2026 (GTFS2020) ». Il redirige vers la
 // dernière version publiée (URL R2 présignée, valable ~60 s). Accès libre
 // sans clé au moment de l'écriture.
