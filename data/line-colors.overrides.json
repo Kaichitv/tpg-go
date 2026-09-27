@@ -1,0 +1,4 @@
+{
+  "$comment": "Couleurs de lignes TPG à fusionner PAR-DESSUS le GTFS (qui n'a pas de route_color pour la Suisse à ce jour). Ne saisir que des valeurs issues d'une source officielle TPG (plan du réseau, charte). Format : \"12\": { \"bg\": \"#RRGGBB\", \"fg\": \"#RRGGBB\" } — fg optionnel (calculé sinon). Relancer ensuite `npm run build:colors`.",
+  "lines": {}
+}

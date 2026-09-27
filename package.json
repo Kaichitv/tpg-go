@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "colors": "node scripts/build-line-colors.mjs",
-    "test:api": "node scripts/test-api.mjs"
+    "test:api": "node scripts/test-api.mjs",
+    "build:colors": "node scripts/build-line-colors.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
