@@ -8,3 +8,6 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 .env*.local
 .env
+
+# Rapport régénérable de scripts/build-line-colors.mjs (le runtime lit lib/lineColors.fallback.json)
+lib/lineColors.generated.json

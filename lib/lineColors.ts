@@ -1,40 +1,62 @@
 // lib/lineColors.ts
-// Couleurs des badges de ligne. Lit le JSON généré au build par
-// scripts/build-line-colors.mjs (GTFS officiel + overrides) — jamais le zip GTFS.
-// Sans couleur connue : orange TPG, avec une couleur de texte choisie pour le contraste.
+// Couleurs des badges de ligne. Ordre de résolution :
+//   1. lib/lineColors.overrides.ts  — lignes phares vérifiées à la main (source citée)
+//   2. lib/lineColors.fallback.json — snapshot committé, produit par
+//      scripts/build-line-colors.mjs (GTFS officiel, complété par tpg.ch)
+//   3. orange TPG
+// Le runtime ne lit que ces fichiers, jamais le zip GTFS. Le texte officiel est
+// conservé s'il atteint WCAG AA sur le fond ; sinon (ou s'il manque) on calcule
+// le meilleur contraste entre quasi-noir et blanc.
 
-import generated from "./lineColors.generated.json";
+import fallback from "./lineColors.fallback.json";
+import { LINE_COLOR_OVERRIDES } from "./lineColors.overrides";
 
 export const ACCENT = "#F59700";
 
 /** Couleurs de texte candidates pour un badge (quasi-noir chaud / blanc). */
 const DARK_TEXT = "#1A1200";
 const LIGHT_TEXT = "#FFFFFF";
+const PURE_BLACK = "#000000";
 /** WCAG AA, texte normal. */
 const AA = 4.5;
 
-export type LineColor = { bg: string; fg: string; fromSource: boolean };
+export type LineColorSource = "override" | "fallback" | "default";
+export type LineColor = { bg: string; fg: string; source: LineColorSource; fromSource: boolean };
 
-type Generated = { lines: Record<string, { bg: string; fg?: string }> };
-const LINES = (generated as Generated).lines;
+type Entry = { bg: string; text?: string };
+const FALLBACK: Readonly<Record<string, Entry>> = fallback;
+
+const HEX = /^#[0-9A-F]{6}$/i;
 
 const cache = new Map<string, LineColor>();
 
-export function getLineColor(line: string): LineColor {
-  const hit = cache.get(line);
+export function getLineColor(shortName: string): LineColor {
+  const key = shortName.trim();
+  const hit = cache.get(key);
   if (hit) return hit;
 
-  const entry = LINES[line];
-  const bg = entry?.bg ?? ACCENT;
-  // On garde route_text_color s'il est lisible, sinon on calcule le meilleur contraste.
-  const fg = entry?.fg && contrastRatio(bg, entry.fg) >= AA ? entry.fg : bestTextColor(bg);
-  const color: LineColor = { bg, fg, fromSource: Boolean(entry) };
-  cache.set(line, color);
+  const override = valid(LINE_COLOR_OVERRIDES[key]);
+  const snapshot = override ? undefined : valid(FALLBACK[key]);
+  const entry = override ?? snapshot;
+  const source: LineColorSource = override ? "override" : snapshot ? "fallback" : "default";
+
+  const bg = entry?.bg.toUpperCase() ?? ACCENT;
+  const text = entry?.text && HEX.test(entry.text) ? entry.text.toUpperCase() : undefined;
+  const fg = text && contrastRatio(bg, text) >= AA ? text : bestTextColor(bg);
+  const color: LineColor = { bg, fg, source, fromSource: source !== "default" };
+  cache.set(key, color);
   return color;
 }
 
+/** Ignore une entrée dont le fond n'est pas un #RRGGBB valide (on passe au niveau suivant). */
+function valid(entry: Entry | undefined): Entry | undefined {
+  return entry && HEX.test(entry.bg) ? entry : undefined;
+}
+
 export function bestTextColor(bg: string): string {
-  return contrastRatio(bg, DARK_TEXT) >= contrastRatio(bg, LIGHT_TEXT) ? DARK_TEXT : LIGHT_TEXT;
+  const best = contrastRatio(bg, DARK_TEXT) >= contrastRatio(bg, LIGHT_TEXT) ? DARK_TEXT : LIGHT_TEXT;
+  // Fonds moyens (ex. #E91E77) : le quasi-noir peut rester sous AA là où le noir pur passe.
+  return best === DARK_TEXT && contrastRatio(bg, best) < AA ? PURE_BLACK : best;
 }
 
 /** Rapport de contraste WCAG 2.x entre deux couleurs #RRGGBB. */
