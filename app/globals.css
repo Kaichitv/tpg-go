@@ -20,14 +20,14 @@
 :root {
   color-scheme: light dark;
 
-  --bg: #e8eaee;
+  --bg: #ffffff;
   --surface-1: #ffffff;
   --surface-2: #ffffff;
   --surface-3: #ffffff;
   --surface-4: #ffffff;
   --surface-hover: rgb(15 23 42 / 0.045);
   --surface-press: rgb(15 23 42 / 0.08);
-  --hairline: rgb(15 23 42 / 0.08);
+  --hairline: rgb(15 23 42 / 0.1);
   --highlight: rgb(255 255 255 / 0.9); /* arête haute éclairée */
 
   --shadow-1: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.1);
@@ -39,10 +39,10 @@
 
   --fg: #0b0c0f;
   --fg-muted: #50525a; /* ≥ 6.4:1 */
-  --fg-subtle: #65676f; /* ≥ 4.6:1 (fond), 5.6:1 (surfaces) */
+  --fg-subtle: #65676f; /* ≥ 5.6:1 */
 
   --accent: #f59700; /* orange TPG — remplissages uniquement en clair */
-  --accent-ink: #a14e00; /* orange lisible en texte : ≥ 4.8:1 */
+  --accent-ink: #a14e00; /* orange lisible en texte : ≥ 5.8:1 */
   --on-accent: #1a1200;
   --focus: #a14e00;
 
