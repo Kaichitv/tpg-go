@@ -12,6 +12,9 @@ export type Stop = {
   lon: number | null;
 };
 
+/** Arrêt proche d'une position ; distance à vol d'oiseau en mètres (null si inconnue). */
+export type NearbyStop = Stop & { distanceM: number | null };
+
 /** Un horaire : théorique + temps réel (null si la source n'en fournit pas). */
 export type TimePoint = {
   scheduled: string; // ISO 8601 avec fuseau

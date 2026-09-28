@@ -7,6 +7,7 @@
 import type {
   Board,
   Departure,
+  NearbyStop,
   Stop,
   StopKind,
   TimePoint,
@@ -42,6 +43,7 @@ type RawStation = {
   name?: string | null;
   icon?: string | null;
   coordinate?: { x?: number | null; y?: number | null } | null;
+  distance?: number | null;
 };
 
 type RawCheckpoint = {
@@ -77,6 +79,25 @@ export async function searchStops(query: string): Promise<Stop[]> {
     3600, // les arrêts ne bougent pas
   );
   return (data.stations ?? []).filter((s) => s.id && s.name).map(toStop);
+}
+
+/**
+ * Arrêts les plus proches d'une position (WGS84), du plus proche au plus loin.
+ * Coordonnées arrondies à 4 décimales (~10 m) : précision suffisante, et les
+ * petites variations du GPS retombent sur la même entrée de cache.
+ */
+export async function nearbyStops(lat: number, lon: number): Promise<NearbyStop[]> {
+  const data = await get<{ stations?: RawStation[] }>(
+    `/locations?${qs({ x: lat.toFixed(4), y: lon.toFixed(4), type: "station" })}`,
+    3600,
+  );
+  return (data.stations ?? [])
+    .filter((s) => s.id && s.name)
+    .map((s) => ({
+      ...toStop(s),
+      distanceM: typeof s.distance === "number" ? Math.round(s.distance) : null,
+    }))
+    .sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity));
 }
 
 /**

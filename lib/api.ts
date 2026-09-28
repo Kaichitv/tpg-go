@@ -2,7 +2,7 @@
 // Accès client aux routes serveur /api/*. L'UI ne connaît que ces fonctions et
 // les types de lib/types.ts — jamais la source tierce.
 
-import type { Board, Stop, Trip, TripQuery } from "./types";
+import type { Board, NearbyStop, Stop, Trip, TripQuery } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -29,6 +29,12 @@ export function fetchBoard(stop: string, limit: number, signal?: AbortSignal): P
 
 export async function fetchStops(q: string, signal?: AbortSignal): Promise<Stop[]> {
   const data = await getJson<{ stops: Stop[] }>(`/api/locations?${new URLSearchParams({ q })}`, signal);
+  return data.stops;
+}
+
+export async function fetchNearby(lat: number, lon: number, signal?: AbortSignal): Promise<NearbyStop[]> {
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  const data = await getJson<{ stops: NearbyStop[] }>(`/api/nearby?${params}`, signal);
   return data.stops;
 }
 
