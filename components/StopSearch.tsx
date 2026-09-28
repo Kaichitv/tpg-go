@@ -94,7 +94,7 @@ export default function StopSearch({ idle }: Props) {
 
   return (
     <>
-      <StickyBar className="mb-4 py-2">
+      <StickyBar className="-mt-2 mb-4 py-2">
         <div role="search">
           <div className="elev-2 flex h-12 items-center gap-2 rounded-2xl pr-1 pl-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus)">
             <MagnifyingGlassIcon size={20} aria-hidden className="shrink-0 text-muted" />

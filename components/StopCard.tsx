@@ -36,23 +36,23 @@ export default function StopCard({ id, name, detail, trailing, collapsed = false
 
   return (
     <Card as="article" aria-labelledby={headingId} className="overflow-hidden">
-      <div className="flex items-center gap-1 border-b border-hairline py-1 pr-1.5 pl-4">
+      <div className="flex items-center gap-1 border-b border-hairline pt-4 pb-2 pr-1.5 pl-4">
         <Link
           href={`/stop/${encodeURIComponent(id)}?name=${encodeURIComponent(name)}`}
-          className="group -my-1 flex min-h-12 min-w-0 flex-1 items-center gap-1 rounded-xl"
+          className="group -my-1 flex min-h-12 min-w-0 flex-1 flex-col justify-center rounded-xl"
         >
-          <span className="min-w-0">
+          <span className="flex min-w-0 items-center gap-1">
             <Heading id={headingId} className="truncate text-[17px] leading-tight font-semibold">
               {stop}
             </Heading>
-            {subtitle && <span className="block truncate text-[13px] text-muted">{subtitle}</span>}
+            <CaretRightIcon
+              size={16}
+              weight="bold"
+              aria-hidden
+              className="shrink-0 text-subtle transition-transform group-hover:translate-x-0.5"
+            />
           </span>
-          <CaretRightIcon
-            size={16}
-            weight="bold"
-            aria-hidden
-            className="shrink-0 text-subtle transition-transform group-hover:translate-x-0.5"
-          />
+          {subtitle && <span className="block truncate text-[13px] text-muted">{subtitle}</span>}
           <span className="sr-only">: voir tous les passages</span>
         </Link>
         {trailing}

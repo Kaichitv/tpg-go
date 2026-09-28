@@ -121,14 +121,6 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
           </IconButton>
         </div>
 
-        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-surface-press/60 px-3 py-2 text-[13px] leading-snug text-muted">
-          <InfoIcon size={18} aria-hidden className="mt-px shrink-0" />
-          <span>
-            Progression <strong className="font-semibold text-fg">estimée d’après les horaires</strong>
-            {hasRealtime ? " (temps réel inclus)" : ""}. Pas de position GPS du véhicule.
-          </span>
-        </p>
-
         <div className="mt-2 flex items-center justify-between gap-2 text-[13px]" aria-live="polite">
           {progress.finished ? (
             <span className="inline-flex items-center gap-1.5 font-medium text-muted">
