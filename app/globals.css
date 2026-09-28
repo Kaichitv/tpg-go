@@ -1,5 +1,18 @@
 @import "tailwindcss" source("..");
 
+/* Thème sombre : préférence système (réglage « Auto »), ou choix forcé dans les
+   Réglages via <html data-theme="light|dark"> (posé avant le 1er rendu, cf. layout). */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"]), :not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
+
 /* ------------------------------------------------------------------------------
    TPG Go — design system
    Sombre et sobre, inspiré des Apple HIG · thème auto clair/sombre · accent TPG.
@@ -50,10 +63,12 @@
   --late-bg: rgb(184 38 26 / 0.1);
   --ontime: #16703a; /* ≥ 5.1:1 */
 
-}
+  &[data-theme="light"] {
+    color-scheme: light;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+  @variant dark {
+    color-scheme: dark;
     --bg: #08090a;
     --surface-1: #111214;
     --surface-2: #17181b;

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { THEME_COLORS, themeInitScript } from "@/lib/themeInit";
 import SwRegister from "./sw-register";
+import ThemeSync from "./theme-sync";
 
 export const metadata: Metadata = {
   title: { default: "TPG Go", template: "%s · TPG Go" },
@@ -12,8 +14,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f6f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#08090a" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
   ],
   colorScheme: "light dark",
   width: "device-width",
@@ -24,9 +26,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr-CH">
+    // data-theme est posé par le script inline avant l'hydratation (thème forcé).
+    <html lang="fr-CH" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         {children}
+        <ThemeSync />
         <SwRegister />
       </body>
     </html>
