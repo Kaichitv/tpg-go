@@ -22,7 +22,8 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 - **Recherche** : champ vide → arrêts récents (hors favoris) puis arrêts à proximité (distance
   à vol d'oiseau, prochains passages) ; la position n'est demandée qu'au geste, sauf si déjà
   autorisée.
-- **Réglages** : thème auto / clair / sombre (persisté localement), version et sources.
+- **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
+  (nom + texte, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), version et sources.
 
 - **Recherche d'arrêt** : autocomplétion (debounce 250 ms, clavier ↑ ↓ Entrée Échap, tactile),
   limitée au **réseau TPG** (y compris les arrêts en France), insensible aux accents et à la
@@ -43,12 +44,13 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 app/
   page.tsx                  onglet Favoris (accueil)
   search/page.tsx           onglet Recherche (recherche, récents, à proximité)
-  settings/page.tsx         onglet Réglages (thème, à propos)
+  settings/page.tsx         onglet Réglages (thème, suggestions, à propos)
   stop/[id]/page.tsx        tableau des passages d'un arrêt (poussé dans l'onglet d'origine)
   api/departures/route.ts   prochains passages (?stop=<id|nom>&limit=)
   api/locations/route.ts    recherche d'arrêts (?q=)
   api/nearby/route.ts       arrêts proches (?lat=&lon=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
+  api/suggestions/route.ts  POST d'une suggestion { name, message } → webhook Discord
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
                             FavStar, TripSheet, FavoriteCard, StatusLine…
@@ -58,6 +60,8 @@ lib/
   stopIndex.ts              recherche / proximité dans les arrêts TPG (serveur)
   tpgStops.json             snapshot committé, généré par scripts/build-tpg-stops.mjs
   api.ts                    fetchers client vers /api/*
+  suggestion.ts             validation d'une suggestion (partagée client/serveur)
+  discord.ts                envoi des suggestions au webhook Discord (serveur)
   favorites.ts              favoris (localStorage + useSyncExternalStore)
   useBoard.ts               polling 30 s (visible uniquement), reprise au premier plan
   progress.ts               progression temporelle d'une course
@@ -158,11 +162,15 @@ npm run test:api "Bel-Air"
 - API communautaire transport.opendata.ch plafonnée (~1000 req/jour/IP), d'où le cache serveur.
 - Temps réel non garanti pour l'urbain ; affiché « théorique » quand absent.
 - Pas de position GPS des véhicules en v1 (GTFS-RT officiel prévu en v2).
+- Anti-abus des suggestions « best effort » (pot de miel, même origine, 5 envois / 10 min par IP
+  en mémoire de l'instance serverless, remis à zéro au démarrage à froid).
 
 ## Déployer sur Vercel
 
 1. Pousser le dépôt sur GitHub.
 2. Sur vercel.com : *New Project* → importer le repo → *Deploy* (aucune variable requise).
+   Pour recevoir les suggestions : *Settings → Environment Variables* → `DISCORD_WEBHOOK_URL`
+   (voir `.env.example`), puis redéployer.
 3. Sur mobile : ouvrir l'URL → *Ajouter à l'écran d'accueil*.
 
 ## Icônes

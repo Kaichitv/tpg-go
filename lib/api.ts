@@ -2,6 +2,7 @@
 // Accès client aux routes serveur /api/*. L'UI ne connaît que ces fonctions et
 // les types de lib/types.ts — jamais la source tierce.
 
+import type { Suggestion } from "./suggestion";
 import type { Board, NearbyStop, Stop, Trip, TripQuery } from "./types";
 
 export class ApiError extends Error {
@@ -41,6 +42,19 @@ export async function fetchNearby(lat: number, lon: number, signal?: AbortSignal
 export function fetchTrip(q: TripQuery, signal?: AbortSignal): Promise<Trip> {
   const params = new URLSearchParams({ journey: q.journey, line: q.line, stop: q.stopId, at: q.at });
   return getJson<Trip>(`/api/trip?${params}`, signal);
+}
+
+/** `website` : pot de miel anti-robots, laissé vide par un humain. */
+export async function sendSuggestion(s: Suggestion & { website?: string }): Promise<void> {
+  const res = await fetch("/api/suggestions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(s),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new ApiError(body?.detail ?? `HTTP ${res.status}`, res.status);
+  }
 }
 
 export function isAbort(err: unknown): boolean {

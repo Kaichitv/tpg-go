@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 import Card from "@/components/Card";
 import Screen from "@/components/Screen";
+import SuggestionForm from "@/components/SuggestionForm";
 import ThemePicker from "@/components/ThemePicker";
 import pkg from "@/package.json";
 
@@ -18,6 +19,10 @@ export default function SettingsPage() {
           <ThemePicker />
           <p className="mt-2.5 px-1 text-[13px] text-muted">« Auto » suit le réglage clair/sombre de l’appareil.</p>
         </Card>
+      </Section>
+
+      <Section id="settings-suggestions" title="Suggestions">
+        <SuggestionForm />
       </Section>
 
       <Section id="settings-about" title="À propos">
