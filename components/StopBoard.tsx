@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CaretLeftIcon } from "@phosphor-icons/react/ssr";
+import { addRecent } from "@/lib/recents";
 import { splitStopName } from "@/lib/stopName";
 import { useOriginTab } from "@/lib/tabs";
 import { useNow } from "@/lib/time";
@@ -26,6 +27,13 @@ export default function StopBoard({ id, initialName }: Props) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleVisible = useInView(titleRef);
   const origin = useOriginTab();
+
+  // Alimente les « Récents » de la recherche une fois l'arrêt confirmé par la source.
+  const loadedId = board?.stop.id;
+  const loadedName = board?.stop.name;
+  useEffect(() => {
+    if (loadedId && loadedName) addRecent({ id: loadedId, name: loadedName });
+  }, [loadedId, loadedName]);
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-tabbar">
