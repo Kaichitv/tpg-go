@@ -99,7 +99,7 @@ function StopList({ nearby }: { nearby: NearbyStops }) {
       <p className={`px-1 text-[15px] ${status === "error" ? "text-late" : "text-muted"}`}>
         {status === "error"
           ? "Impossible de récupérer les arrêts proches. Réessaie dans un instant."
-          : "Aucun arrêt trouvé autour de ta position."}
+          : "Aucun arrêt TPG à moins de 2 km de ta position."}
       </p>
     );
   }

@@ -25,7 +25,9 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 - **Réglages** : thème auto / clair / sombre (persisté localement), version et sources.
 
 - **Recherche d'arrêt** : autocomplétion (debounce 250 ms, clavier ↑ ↓ Entrée Échap, tactile),
-  arrêts du canton de Genève remontés en tête.
+  limitée au **réseau TPG** (y compris les arrêts en France), insensible aux accents et à la
+  ponctuation (« bel air », « belair » → Genève, Bel-Air). « À proximité » ne liste aussi que des
+  arrêts TPG, à moins de 2 km.
 - **Favoris** (localStorage) : affichés en premier sur l'accueil avec leurs 3 prochains passages ;
   ajout/retrait via l'étoile ; « Modifier » pour réordonner ou supprimer.
 - **Tableau d'un arrêt** (`/stop/[id]`) : badge de ligne, destination, compte à rebours, retard
@@ -53,6 +55,8 @@ components/                 Card, StickyBar, LineBadge, DepartureRow, Departures
 lib/
   types.ts                  modèle de domaine partagé (indépendant de la source)
   transport.ts              SEUL module qui connaît transport.opendata.ch (serveur)
+  stopIndex.ts              recherche / proximité dans les arrêts TPG (serveur)
+  tpgStops.json             snapshot committé, généré par scripts/build-tpg-stops.mjs
   api.ts                    fetchers client vers /api/*
   favorites.ts              favoris (localStorage + useSyncExternalStore)
   useBoard.ts               polling 30 s (visible uniquement), reprise au premier plan
@@ -61,13 +65,15 @@ lib/
   lineColors.overrides.ts   lignes phares vérifiées à la main, source citée
   lineColors.fallback.json  snapshot committé, généré par scripts/build-line-colors.mjs
 public/sw.js                service worker (jamais de cache /api/*)
-scripts/                    build-line-colors.mjs, build-icons.mjs, test-api.mjs
+scripts/                    build-line-colors.mjs, build-tpg-stops.mjs, build-icons.mjs, test-api.mjs
+                            lib/gtfs.mjs (lecture partagée du GTFS : Range, zip, CSV, flux)
 assets/tpg-go-icon.png      image maître des icônes (non servie)
 data/line-colors.overrides.json   couleurs saisies à la main (voir plus bas)
 ```
 
 - Tous les appels passent par les routes serveur : pas de CORS, cache amont à TTL strict (20 s
-  pour les passages, 1 h pour les arrêts), API tierce protégée.
+  pour les passages), API tierce protégée. La recherche d'arrêts et la proximité n'appellent
+  pas la source : elles lisent l'index TPG local.
 - **Migration OJP** : réécrire `lib/transport.ts` (mêmes fonctions, mêmes types). L'UI ne change pas.
 
 ## Couleurs des lignes (GTFS officiel)
@@ -110,6 +116,26 @@ calcule le meilleur contraste (quasi-noir / blanc).
 
 À relancer au changement d'horaire annuel (mi-décembre) avec
 `GTFS_URL=…/timetable-2027-gtfs2020/permalink`.
+
+## Arrêts TPG (GTFS officiel)
+
+```bash
+npm run build:stops
+```
+
+La recherche nationale de la source live mélange toute la Suisse et plafonne à 10 résultats :
+filtrer après coup perdrait des arrêts genevois. Le script construit donc la liste des arrêts
+desservis par au moins une course TPG, à partir du même GTFS :
+
+- `agency.txt` → `routes.txt` (lignes TPG, mode tram/bus) → `trips.txt` → `stop_times.txt`
+  (~3,6 Go décompressés, **lus en flux** via HTTP Range, ~1 min) → `stops.txt` (nom, position).
+- Identifiant = colonne `didok` de `stops.txt` (ex. `8587387`), celui qu'attend la source live
+  pour les passages ; les quais d'un même arrêt sont regroupés. Les arrêts en France ont des
+  identifiants `14xxxxx`, acceptés eux aussi par la source.
+- Sortie : `lib/tpgStops.json`, **snapshot committé** (~880 arrêts, ~80 Ko), non réécrit si le
+  résultat paraît incomplet (< 200 arrêts).
+
+À relancer au changement d'horaire annuel, comme `build:colors`.
 
 ## Design system
 

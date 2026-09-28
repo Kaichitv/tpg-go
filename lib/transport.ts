@@ -3,7 +3,10 @@
 // Source v1 : API communautaire transport.opendata.ch (sans clé).
 // C'est le SEUL fichier qui connaît la source : pour passer à l'OJP officiel
 // (opentransportdata.swiss), on réécrit ce module sans toucher aux types ni à l'UI.
+// Les arrêts (recherche, proximité) viennent de l'index TPG local (lib/stopIndex.ts) :
+// la recherche de la source couvre toute la Suisse et plafonne à 10 résultats.
 
+import { nearestTpgStops, searchTpgStops } from "./stopIndex";
 import type {
   Board,
   Departure,
@@ -43,7 +46,6 @@ type RawStation = {
   name?: string | null;
   icon?: string | null;
   coordinate?: { x?: number | null; y?: number | null } | null;
-  distance?: number | null;
 };
 
 type RawCheckpoint = {
@@ -73,31 +75,14 @@ type RawStationboard = { station?: RawStation | null; stationboard?: RawJourney[
 
 // --- API publique ------------------------------------------------------------------
 
+/** Arrêts du réseau TPG dont le nom correspond à la saisie. */
 export async function searchStops(query: string): Promise<Stop[]> {
-  const data = await get<{ stations?: RawStation[] }>(
-    `/locations?${qs({ query, type: "station" })}`,
-    3600, // les arrêts ne bougent pas
-  );
-  return (data.stations ?? []).filter((s) => s.id && s.name).map(toStop);
+  return searchTpgStops(query, 20);
 }
 
-/**
- * Arrêts les plus proches d'une position (WGS84), du plus proche au plus loin.
- * Coordonnées arrondies à 4 décimales (~10 m) : précision suffisante, et les
- * petites variations du GPS retombent sur la même entrée de cache.
- */
+/** Arrêts TPG les plus proches d'une position (WGS84), du plus proche au plus loin. */
 export async function nearbyStops(lat: number, lon: number): Promise<NearbyStop[]> {
-  const data = await get<{ stations?: RawStation[] }>(
-    `/locations?${qs({ x: lat.toFixed(4), y: lon.toFixed(4), type: "station" })}`,
-    3600,
-  );
-  return (data.stations ?? [])
-    .filter((s) => s.id && s.name)
-    .map((s) => ({
-      ...toStop(s),
-      distanceM: typeof s.distance === "number" ? Math.round(s.distance) : null,
-    }))
-    .sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity));
+  return nearestTpgStops(lat, lon, 10);
 }
 
 /**

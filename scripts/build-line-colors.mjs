@@ -27,38 +27,12 @@
 //   lib/lineColors.generated.json — rapport complet (source, stats), gitignoré
 // Si tpg.ch est injoignable, le snapshot existant n'est pas écrasé.
 //
-// Le fichier zip national fait ~290 Mo : plutôt que de tout télécharger, on lit
-// le répertoire central du zip via des requêtes HTTP Range, puis on ne récupère
-// que agency.txt et routes.txt (quelques centaines de Ko). Si le serveur ne gère
-// pas Range, on se rabat sur un téléchargement complet en mémoire.
-//
-// Aucune dépendance : fetch + zlib natifs de Node ≥ 18.
+// Lecture du GTFS (HTTP Range, zip, CSV) : voir scripts/lib/gtfs.mjs.
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { inflateRawSync } from "node:zlib";
-
-// Variables optionnelles lues depuis .env s'il existe (voir .env.example).
-try {
-  process.loadEnvFile?.(".env");
-} catch {
-  /* pas de .env : valeurs par défaut */
-}
-
-// Permalink CKAN du jeu « Timetable 2026 (GTFS2020) ». Il redirige vers la
-// dernière version publiée (URL R2 présignée, valable ~60 s). Accès libre
-// sans clé au moment de l'écriture.
-const DEFAULT_GTFS_URL =
-  "https://data.opentransportdata.swiss/dataset/timetable-2026-gtfs2020/permalink";
-
-const GTFS_URL = process.env.GTFS_URL || DEFAULT_GTFS_URL;
-// Filtre agence : on compare à agency_name, agency_id et agency_url (insensible à la casse).
-const AGENCY_MATCH = (process.env.GTFS_AGENCY || "Transports Publics Genevois|TPG|tpg.ch")
-  .split("|")
-  .map((s) => s.trim().toLowerCase())
-  .filter(Boolean);
-const API_KEY = process.env.OTD_API_KEY;
+import { GTFS_URL, findTpgAgencies, parseCsv, readRemoteZip } from "./lib/gtfs.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = resolve(ROOT, "lib/lineColors.generated.json");
@@ -67,160 +41,6 @@ const OVERRIDES = resolve(ROOT, "data/line-colors.overrides.json");
 const TPG_LINES_URL = process.env.TPG_LINES_URL || "https://www.tpg.ch/fr/lignes";
 /** Classes de texte des badges sur tpg.ch (CSS : `.line-logo.blanc span { color: white }`). */
 const TPG_TEXT = { blanc: "#FFFFFF", noir: "#000000" };
-
-const headers = API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {};
-
-// --- HTTP ------------------------------------------------------------------
-
-/** Résout les redirections une fois pour obtenir l'URL finale (présignée). */
-async function resolveUrl(url) {
-  const res = await fetch(url, { headers: { ...headers, Range: "bytes=0-0" } });
-  await res.body?.cancel();
-  if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`);
-  const total = Number(res.headers.get("content-range")?.split("/")[1]);
-  return { url: res.url, total: res.status === 206 && total > 0 ? total : null };
-}
-
-async function range(url, start, end) {
-  const res = await fetch(url, { headers: { ...headers, Range: `bytes=${start}-${end}` } });
-  if (res.status !== 206) throw new Error(`Range non supporté (HTTP ${res.status})`);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-// --- ZIP (lecture minimale : répertoire central + stored/deflate, zip64 inclus) ---
-
-function findEocd(buf) {
-  for (let i = buf.length - 22; i >= 0; i--) {
-    if (buf.readUInt32LE(i) === 0x06054b50) return i;
-  }
-  throw new Error("Fin de répertoire central introuvable");
-}
-
-/** Renvoie { cdOffset, cdSize } à partir de la fin du fichier. */
-function readEocd(tail, tailStart) {
-  const i = findEocd(tail);
-  let cdSize = tail.readUInt32LE(i + 12);
-  let cdOffset = tail.readUInt32LE(i + 16);
-  if (cdOffset === 0xffffffff || cdSize === 0xffffffff) {
-    // Zip64 : le localisateur précède l'EOCD.
-    const loc = i - 20;
-    if (tail.readUInt32LE(loc) !== 0x07064b50) throw new Error("Zip64 mal formé");
-    const eocd64 = Number(tail.readBigUInt64LE(loc + 8)) - tailStart;
-    cdSize = Number(tail.readBigUInt64LE(eocd64 + 40));
-    cdOffset = Number(tail.readBigUInt64LE(eocd64 + 48));
-  }
-  return { cdOffset, cdSize };
-}
-
-function parseCentralDirectory(cd) {
-  const entries = new Map();
-  let p = 0;
-  while (p + 46 <= cd.length && cd.readUInt32LE(p) === 0x02014b50) {
-    const method = cd.readUInt16LE(p + 10);
-    let compSize = cd.readUInt32LE(p + 20);
-    let size = cd.readUInt32LE(p + 24);
-    const nameLen = cd.readUInt16LE(p + 28);
-    const extraLen = cd.readUInt16LE(p + 30);
-    const commentLen = cd.readUInt16LE(p + 32);
-    let offset = cd.readUInt32LE(p + 42);
-    const name = cd.toString("utf8", p + 46, p + 46 + nameLen);
-    // Champs zip64 éventuels dans l'extra (id 0x0001), dans l'ordre size / compSize / offset.
-    let e = p + 46 + nameLen;
-    const eEnd = e + extraLen;
-    while (e + 4 <= eEnd) {
-      const id = cd.readUInt16LE(e);
-      const len = cd.readUInt16LE(e + 2);
-      if (id === 0x0001) {
-        let q = e + 4;
-        if (size === 0xffffffff) { size = Number(cd.readBigUInt64LE(q)); q += 8; }
-        if (compSize === 0xffffffff) { compSize = Number(cd.readBigUInt64LE(q)); q += 8; }
-        if (offset === 0xffffffff) { offset = Number(cd.readBigUInt64LE(q)); }
-      }
-      e += 4 + len;
-    }
-    entries.set(name.split("/").pop(), { method, compSize, size, offset });
-    p = eEnd + commentLen;
-  }
-  return entries;
-}
-
-function inflateEntry(entry, localAndData) {
-  if (localAndData.readUInt32LE(0) !== 0x04034b50) throw new Error("En-tête local invalide");
-  const nameLen = localAndData.readUInt16LE(26);
-  const extraLen = localAndData.readUInt16LE(28);
-  const start = 30 + nameLen + extraLen;
-  const data = localAndData.subarray(start, start + entry.compSize);
-  if (entry.method === 0) return data;
-  if (entry.method === 8) return inflateRawSync(data);
-  throw new Error(`Méthode de compression ${entry.method} non gérée`);
-}
-
-/** Lit certains fichiers du zip distant. Retourne Map<nom, Buffer>. */
-async function readRemoteZip(url, wanted) {
-  const { url: finalUrl, total } = await resolveUrl(url);
-  const out = new Map();
-
-  if (total) {
-    const tailLen = Math.min(total, 128 * 1024);
-    const tailStart = total - tailLen;
-    const tail = await range(finalUrl, tailStart, total - 1);
-    const { cdOffset, cdSize } = readEocd(tail, tailStart);
-    const cd =
-      cdOffset >= tailStart
-        ? tail.subarray(cdOffset - tailStart, cdOffset - tailStart + cdSize)
-        : await range(finalUrl, cdOffset, cdOffset + cdSize - 1);
-    const entries = parseCentralDirectory(cd);
-    for (const name of wanted) {
-      const entry = entries.get(name);
-      if (!entry) throw new Error(`${name} absent du GTFS`);
-      // En-tête local : 30 o + nom + extra (marge de 1 Ko largement suffisante).
-      const chunk = await range(finalUrl, entry.offset, entry.offset + 30 + 1024 + entry.compSize);
-      out.set(name, inflateEntry(entry, chunk));
-    }
-    return out;
-  }
-
-  console.warn("⚠ Range non disponible : téléchargement complet du zip…");
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const { cdOffset, cdSize } = readEocd(buf, 0);
-  const entries = parseCentralDirectory(buf.subarray(cdOffset, cdOffset + cdSize));
-  for (const name of wanted) {
-    const entry = entries.get(name);
-    if (!entry) throw new Error(`${name} absent du GTFS`);
-    out.set(name, inflateEntry(entry, buf.subarray(entry.offset)));
-  }
-  return out;
-}
-
-// --- CSV (RFC 4180, suffisant pour le GTFS) ------------------------------------
-
-function parseCsv(text) {
-  const rows = [];
-  let row = [];
-  let field = "";
-  let quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
-      } else field += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ",") { row.push(field); field = ""; }
-    else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(field); field = "";
-      if (row.length > 1 || row[0] !== "") rows.push(row);
-      row = [];
-    } else field += c;
-  }
-  if (field !== "" || row.length) { row.push(field); rows.push(row); }
-  const [head = [], ...body] = rows;
-  const cols = head.map((h) => h.replace(/^﻿/, "").trim());
-  return body.map((r) => Object.fromEntries(cols.map((c, i) => [c, (r[i] ?? "").trim()])));
-}
 
 // --- Main ------------------------------------------------------------------------
 
@@ -232,12 +52,7 @@ async function main() {
   const agencies = parseCsv(files.get("agency.txt").toString("utf8"));
   const routes = parseCsv(files.get("routes.txt").toString("utf8"));
 
-  const tpg = agencies.filter((a) =>
-    [a.agency_name, a.agency_id, a.agency_url]
-      .map((v) => (v ?? "").toLowerCase())
-      .some((v) => AGENCY_MATCH.some((m) => v === m || v.includes(m)))
-  );
-  if (!tpg.length) throw new Error(`Aucune agence ne correspond à ${AGENCY_MATCH.join(" | ")}`);
+  const tpg = findTpgAgencies(agencies);
   const ids = new Set(tpg.map((a) => a.agency_id));
   console.log(`→ Agence(s) : ${tpg.map((a) => `${a.agency_name} [${a.agency_id}]`).join(", ")}`);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { FlagCheckeredIcon, InfoIcon, WarningIcon, XIcon } from "@phosphor-icons/react/ssr";
+import { FlagCheckeredIcon, WarningIcon, XIcon } from "@phosphor-icons/react/ssr";
 import { fetchTrip, isAbort } from "@/lib/api";
 import { getLineColor } from "@/lib/lineColors";
 import { computeProgress, type StopState } from "@/lib/progress";

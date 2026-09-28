@@ -54,7 +54,7 @@ export default function StopSearch({ idle }: Props) {
     const t = setTimeout(async () => {
       try {
         const stops = await fetchStops(q, ctrl.signal);
-        setHits(rankForGeneva(stops));
+        setHits(stops);
         setActive(-1);
         setStatus("done");
       } catch (err) {
@@ -194,13 +194,14 @@ function KindIcon({ kind }: { kind: StopKind }) {
   }
 }
 
-/** Met en gras la partie correspondant à la recherche (insensible casse/accents). */
+/** Met en gras la partie correspondant à la recherche (insensible casse/accents/ponctuation). */
 function Highlight({ text, query }: { text: string; query: string }) {
   // Normalisation caractère par caractère : garde les indices alignés sur `text`.
   const fold = (s: string) =>
     s
       .split("")
       .map((c) => c.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().charAt(0) || c)
+      .map((c) => (/[\p{L}\p{N}]/u.test(c) ? c : " "))
       .join("");
   const i = fold(text).indexOf(fold(query));
   if (i < 0 || !query) return <>{text}</>;
@@ -211,11 +212,4 @@ function Highlight({ text, query }: { text: string; query: string }) {
       {text.slice(i + query.length)}
     </>
   );
-}
-
-/** Canton de Genève (approx.) : remonte ces arrêts en tête, ordre de pertinence conservé. */
-function rankForGeneva(stops: Stop[]): Stop[] {
-  const inGeneva = (s: Stop) =>
-    s.lat !== null && s.lon !== null && s.lat > 46.12 && s.lat < 46.37 && s.lon > 5.95 && s.lon < 6.32;
-  return [...stops.filter(inGeneva), ...stops.filter((s) => !inGeneva(s))];
 }

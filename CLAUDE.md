@@ -7,13 +7,14 @@ PWA des passages TPG en temps réel. Next.js 15 (App Router) + TypeScript, PWA i
 - `npm run build` — **doit toujours passer avant de conclure une tâche**
 - `npm run test:api "Bel-Air"` — vérifie rapidement la source de données
 - `npm run build:colors` — extrait les couleurs de lignes depuis le GTFS officiel (si le script existe)
+- `npm run build:stops` — extrait la liste des arrêts TPG depuis le GTFS officiel (~1 min)
 
 ## Architecture & invariants (ne pas casser)
 - App Router, TypeScript **strict**.
 - **Tous** les appels aux données transport passent par des routes serveur `app/api/*` — jamais d'appel direct du navigateur vers l'API tierce. Ça évite le CORS, permet le cache et masque la source.
 - Source live actuelle : `transport.opendata.ch` (sans clé), **isolée derrière `lib/transport.ts`**. L'UI ne connaît QUE cette couche typée, jamais l'URL tierce → on pourra migrer vers l'OJP officiel (opentransportdata.swiss) sans toucher l'UI.
 - PWA : `app/manifest.ts`, `public/sw.js`. Le service worker ne met **jamais** en cache `/api/*` (horaires toujours frais) ; il sert la coquille hors-ligne.
-- Cache : route `departures` en revalidate court (~20 s), route `locations` long (~1 h).
+- Cache : route `departures` en revalidate court (~20 s). Les routes `locations` et `nearby` ne touchent pas la source : elles lisent l'index local des arrêts TPG (`lib/stopIndex.ts`).
 
 ## Design system
 - Glassmorphisme minimaliste, en suivant les **Apple HIG**.
@@ -25,6 +26,7 @@ PWA des passages TPG en temps réel. Next.js 15 (App Router) + TypeScript, PWA i
 
 ## Données
 - **Couleurs de lignes** : source de vérité = GTFS officiel opentransportdata.swiss (`route_color` / `route_text_color`), extrait par `scripts/build-line-colors.mjs` → `lib/lineColors.*.json`. Le runtime lit le JSON, ne parse pas le zip. Fallback documenté + défaut orange. **Ne jamais inventer de hex.**
+- **Arrêts** : recherche et proximité limitées au réseau TPG. Source de vérité = même GTFS (arrêts desservis par une course de l'agence TPG), extrait par `scripts/build-tpg-stops.mjs` → `lib/tpgStops.json` (snapshot commité, id = DIDOK). Lecture GTFS partagée dans `scripts/lib/gtfs.mjs`.
 - **Suivi de trajet** : séquence via le champ `passList` de opendata.ch. La progression est **déduite des horaires**, ce n'est pas une position GPS (le préciser dans l'UI). La vraie position viendra du GTFS-RT officiel en v2.
 - Aucun secret commité ; clés en variables d'env + `.env.example`.
 
