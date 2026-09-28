@@ -17,6 +17,13 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 
 ## Fonctionnalités (v1)
 
+- **Navigation** : tabbar en bas (Recherche, Favoris, Réglages), toujours visible ; la page
+  d'un arrêt garde son onglet d'origine sélectionné et y revient.
+- **Recherche** : champ vide → arrêts récents (hors favoris) puis arrêts à proximité (distance
+  à vol d'oiseau, prochains passages) ; la position n'est demandée qu'au geste, sauf si déjà
+  autorisée.
+- **Réglages** : thème auto / clair / sombre (persisté localement), version et sources.
+
 - **Recherche d'arrêt** : autocomplétion (debounce 250 ms, clavier ↑ ↓ Entrée Échap, tactile),
   arrêts du canton de Genève remontés en tête.
 - **Favoris** (localStorage) : affichés en premier sur l'accueil avec leurs 3 prochains passages ;
@@ -32,10 +39,13 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 
 ```
 app/
-  page.tsx                  accueil (recherche + favoris)
-  stop/[id]/page.tsx        tableau des passages d'un arrêt
+  page.tsx                  onglet Favoris (accueil)
+  search/page.tsx           onglet Recherche (recherche, récents, à proximité)
+  settings/page.tsx         onglet Réglages (thème, à propos)
+  stop/[id]/page.tsx        tableau des passages d'un arrêt (poussé dans l'onglet d'origine)
   api/departures/route.ts   prochains passages (?stop=<id|nom>&limit=)
   api/locations/route.ts    recherche d'arrêts (?q=)
+  api/nearby/route.ts       arrêts proches (?lat=&lon=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
@@ -103,9 +113,9 @@ calcule le meilleur contraste (quasi-noir / blanc).
 
 ## Design system
 
-Sombre et sobre, inspiré des Apple HIG, thème clair/sombre automatique (`prefers-color-scheme`),
-accent orange TPG `#F59700`. Fond plat (ni orbe ni dégradé) et **élévation en 4 niveaux**
-(`elev-1` cartes, `elev-2` champ de recherche, `elev-3` suggestions, `elev-4` feuille de trajet) :
+Sombre et sobre, inspiré des Apple HIG, thème clair/sombre automatique (`prefers-color-scheme`)
+ou forcé dans les Réglages, accent orange TPG `#F59700`. Fond plat (ni orbe ni dégradé) et **élévation en 4 niveaux**
+(`elev-1` cartes, `elev-2` champ de recherche, `elev-3` popovers, `elev-4` feuille de trajet) :
 surface un peu plus claire en sombre, reflet sur l'arête haute, ombre plus profonde. Les barres
 collantes deviennent opaques et ombrées quand le contenu défile dessous. Tokens dans
 `app/globals.css`, exposés à Tailwind v4. Contrastes AA vérifiés sur chaque niveau. Cibles
