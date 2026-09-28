@@ -2,12 +2,14 @@
 // Rend l'app installable et sa coquille disponible hors-ligne.
 // RÈGLE ABSOLUE : on ne met JAMAIS en cache /api/* (horaires toujours frais).
 
-const VERSION = "tpg-go-v3";
+const VERSION = "tpg-go-v4";
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
 const MAX_ASSETS = 200;
 
-const SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+// Écrans racines des onglets : disponibles hors-ligne dès la première visite.
+const TAB_PAGES = ["/", "/search", "/settings"];
+const SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(precache());
@@ -57,15 +59,20 @@ function isStaticAsset(url) {
 async function precache() {
   const pages = await caches.open(PAGES);
   const assets = await caches.open(ASSETS);
-  await assets.addAll(SHELL.filter((p) => p !== "/"));
-  // On met « / » en cache et on précharge les chunks qu'il référence, pour que
-  // la coquille soit complète hors-ligne dès la première visite.
-  const res = await fetch("/", { cache: "reload" });
-  if (!res.ok) return;
-  await pages.put("/", res.clone());
-  const html = await res.text();
-  const chunks = [...new Set(html.match(/\/_next\/static\/[^"'\s)]+/g) ?? [])];
-  await Promise.all(chunks.map((c) => assets.add(c).catch(() => {})));
+  await assets.addAll(SHELL);
+  // On met les écrans des onglets en cache et on précharge les chunks qu'ils
+  // référencent, pour que la coquille soit complète hors-ligne dès la 1re visite.
+  const chunks = new Set();
+  await Promise.all(
+    TAB_PAGES.map(async (path) => {
+      const res = await fetch(path, { cache: "reload" }).catch(() => null);
+      if (!res?.ok) return;
+      await pages.put(path, res.clone());
+      const html = await res.text();
+      for (const c of html.match(/\/_next\/static\/[^"'\s)]+/g) ?? []) chunks.add(c);
+    }),
+  );
+  await Promise.all([...chunks].map((c) => assets.add(c).catch(() => {})));
 }
 
 async function networkFirstPage(req) {

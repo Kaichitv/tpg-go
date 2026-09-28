@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import TabBar from "@/components/TabBar";
 import { THEME_COLORS, themeInitScript } from "@/lib/themeInit";
 import SwRegister from "./sw-register";
 import ThemeSync from "./theme-sync";
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
+        <TabBar />
         <ThemeSync />
         <SwRegister />
       </body>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   BoatIcon,
@@ -14,21 +14,31 @@ import {
 } from "@phosphor-icons/react/ssr";
 import { fetchStops, isAbort } from "@/lib/api";
 import type { Stop, StopKind } from "@/lib/types";
+import StickyBar from "./StickyBar";
 
 const DEBOUNCE_MS = 250;
 const MIN_CHARS = 2;
 
 type Status = "idle" | "loading" | "done" | "error";
 
-/** Recherche d'arrêt avec autocomplétion (pattern ARIA combobox). */
-export default function StopSearch() {
+type Props = {
+  /** Contenu affiché tant qu'aucune recherche n'est en cours (récents, à proximité…). */
+  idle?: ReactNode;
+};
+
+/**
+ * Recherche d'arrêt avec autocomplétion (pattern ARIA combobox). Les résultats
+ * s'affichent sous le champ, dans le flux de la page, à la place du contenu
+ * `idle`, et restent visibles quand le clavier se ferme ; faire défiler la
+ * liste rétracte le clavier.
+ */
+export default function StopSearch({ idle }: Props) {
   const router = useRouter();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Stop[]>([]);
   const [status, setStatus] = useState<Status>("idle");
-  const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
 
   const q = query.trim();
@@ -58,95 +68,88 @@ export default function StopSearch() {
   }, [q]);
 
   const pick = (s: Stop) => {
-    setOpen(false);
-    setQuery("");
     router.push(`/stop/${encodeURIComponent(s.id)}?name=${encodeURIComponent(s.name)}`);
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown" && hits.length) {
       e.preventDefault();
-      setOpen(true);
       setActive((i) => (i + 1) % hits.length);
     } else if (e.key === "ArrowUp" && hits.length) {
       e.preventDefault();
-      setOpen(true);
       setActive((i) => (i <= 0 ? hits.length - 1 : i - 1));
     } else if (e.key === "Enter") {
-      const s = hits[active] ?? (hits.length ? hits[0] : null);
-      if (s && open) {
+      const s = hits[active] ?? hits[0];
+      if (s) {
         e.preventDefault();
         pick(s);
       }
     } else if (e.key === "Escape") {
-      if (open) setOpen(false);
-      else setQuery("");
+      setQuery("");
     }
   };
 
-  const showList = open && q.length >= MIN_CHARS && status !== "idle";
+  const showList = q.length >= MIN_CHARS && status !== "idle";
   const activeId = active >= 0 ? `${listId}-opt-${active}` : undefined;
 
   return (
-    <div className="relative">
-      <div className="elev-2 flex h-12 items-center gap-2 rounded-2xl pr-1 pl-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus)">
-        <MagnifyingGlassIcon size={20} aria-hidden className="shrink-0 text-muted" />
-        <input
-          ref={inputRef}
-          type="search"
-          role="combobox"
-          aria-label="Rechercher un arrêt"
-          aria-autocomplete="list"
-          aria-expanded={showList}
-          aria-controls={listId}
-          aria-activedescendant={showList ? activeId : undefined}
-          value={query}
-          placeholder="Rechercher un arrêt"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          enterKeyHint="search"
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
-          onKeyDown={onKeyDown}
-          className="h-full min-w-0 flex-1 bg-transparent text-[17px] text-fg outline-none placeholder:text-subtle [&::-webkit-search-cancel-button]:hidden"
-        />
-        {status === "loading" && (
-          <CircleNotchIcon size={20} aria-hidden className="shrink-0 animate-spin text-muted" />
-        )}
-        {query && (
-          <button
-            type="button"
-            aria-label="Effacer la recherche"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              setQuery("");
-              inputRef.current?.focus();
-            }}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-subtle hover:text-muted"
-          >
-            <XCircleIcon size={20} weight="fill" aria-hidden />
-          </button>
-        )}
-      </div>
+    <>
+      <StickyBar className="mb-4 py-2">
+        <div role="search">
+          <div className="elev-2 flex h-12 items-center gap-2 rounded-2xl pr-1 pl-3.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-(--focus)">
+            <MagnifyingGlassIcon size={20} aria-hidden className="shrink-0 text-muted" />
+            <input
+              ref={inputRef}
+              type="search"
+              role="combobox"
+              aria-label="Rechercher un arrêt"
+              aria-autocomplete="list"
+              aria-expanded={showList}
+              aria-controls={listId}
+              aria-activedescendant={showList ? activeId : undefined}
+              value={query}
+              placeholder="Nom d’arrêt"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="search"
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onKeyDown}
+              className="h-full min-w-0 flex-1 bg-transparent text-[17px] text-fg outline-none placeholder:text-subtle [&::-webkit-search-cancel-button]:hidden"
+            />
+            {status === "loading" && (
+              <CircleNotchIcon size={20} aria-hidden className="shrink-0 animate-spin text-muted" />
+            )}
+            {query && (
+              <button
+                type="button"
+                aria-label="Effacer la recherche"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setQuery("");
+                  inputRef.current?.focus();
+                }}
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-subtle hover:text-muted"
+              >
+                <XCircleIcon size={20} weight="fill" aria-hidden />
+              </button>
+            )}
+          </div>
+        </div>
+      </StickyBar>
 
       <div
-        className={`elev-3 absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl ${showList ? "animate-pop-in" : "hidden"}`}
+        className={`elev-1 overflow-hidden rounded-3xl ${showList ? "animate-fade-in" : "hidden"}`}
+        onTouchMove={() => inputRef.current?.blur()}
       >
-        <ul id={listId} role="listbox" aria-label="Arrêts trouvés" className="max-h-[60dvh] overflow-y-auto py-1.5">
+        <ul id={listId} role="listbox" aria-label="Arrêts trouvés" className="py-1.5">
           {hits.map((s, i) => (
             <li
               key={s.id}
               id={`${listId}-opt-${i}`}
               role="option"
               aria-selected={i === active}
-              // Empêche le blur de l'input avant le clic (tactile et souris).
-              onMouseDown={(e) => e.preventDefault()}
               onClick={() => pick(s)}
               onMouseMove={() => setActive(i)}
               className={`mx-1.5 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-[16px] ${i === active ? "bg-surface-press" : ""}`}
@@ -165,10 +168,13 @@ export default function StopSearch() {
           <p className="px-4 pb-3 text-[15px] text-late">Recherche indisponible. Réessaie dans un instant.</p>
         )}
       </div>
+
+      {!showList && idle}
+
       <p className="sr-only" aria-live="polite">
         {status === "done" ? `${hits.length} arrêt${hits.length > 1 ? "s" : ""} trouvé${hits.length > 1 ? "s" : ""}` : ""}
       </p>
-    </div>
+    </>
   );
 }
 

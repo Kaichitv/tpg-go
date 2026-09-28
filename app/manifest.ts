@@ -13,6 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#08090a",
     theme_color: "#08090a",
     orientation: "portrait",
+    // Appui long sur l'icône de l'app (Android) : accès direct à la recherche.
+    shortcuts: [{ name: "Rechercher un arrêt", short_name: "Rechercher", url: "/search" }],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

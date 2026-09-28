@@ -22,7 +22,7 @@
    et une ombre plus profonde :
      elev-1  cartes (favoris, tableau des passages)
      elev-2  contrôles posés (champ de recherche)
-     elev-3  popovers (suggestions de recherche)
+     elev-3  popovers
      elev-4  feuilles modales (suivi du trajet)
    Aucun dégradé ni verre décoratif : les barres collantes deviennent opaques
    et ombrées quand le contenu défile dessous.
@@ -32,6 +32,9 @@
 
 :root {
   color-scheme: light dark;
+
+  /* Hauteur de la tabbar, hors zone de sécurité basse (49 pt sur iOS). */
+  --tabbar-h: 3.25rem;
 
   --bg: #f6f6f7;
   --surface-1: #ffffff;
@@ -186,6 +189,20 @@
     background-color: var(--bg);
     box-shadow: var(--shadow-bar);
   }
+}
+
+/* Tabbar pleine largeur, collée en bas. Opaque pour la même raison que la
+   barre collante : pas de halos colorés des badges qui défilent dessous. */
+@utility tab-bar {
+  background-color: var(--surface-1);
+  border-top: 1px solid var(--hairline);
+  box-shadow: 0 -6px 16px -10px rgb(0 0 0 / 0.18);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Marge basse d'un écran : laisse le contenu défiler au-dessus de la tabbar. */
+@utility pb-tabbar {
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 2rem);
 }
 
 @layer base {

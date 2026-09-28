@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import { CaretLeftIcon } from "@phosphor-icons/react/ssr";
 import { splitStopName } from "@/lib/stopName";
+import { useOriginTab } from "@/lib/tabs";
 import { useNow } from "@/lib/time";
 import { useBoard } from "@/lib/useBoard";
 import { useInView } from "@/lib/useInView";
@@ -24,17 +25,18 @@ export default function StopBoard({ id, initialName }: Props) {
   const { place, stop } = splitStopName(fullName);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleVisible = useInView(titleRef);
+  const origin = useOriginTab();
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <main className="mx-auto w-full max-w-xl px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-tabbar">
       <StickyBar>
         <nav className="-mx-2 grid grid-cols-[1fr_auto_1fr] items-center py-1" aria-label="Navigation">
           <Link
-            href="/"
+            href={origin.href}
             className="inline-flex min-h-11 items-center gap-0.5 justify-self-start rounded-full pr-3 pl-1 text-[17px] text-accent-ink hover:bg-surface-hover"
           >
             <CaretLeftIcon size={22} weight="bold" aria-hidden />
-            Accueil
+            {origin.label}
           </Link>
           {/* Titre compact (façon iOS) quand le grand titre a défilé hors de l'écran. */}
           <span
