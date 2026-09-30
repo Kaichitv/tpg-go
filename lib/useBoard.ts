@@ -33,7 +33,8 @@ function refreshDelay(board: Board | null): number {
   return soon ? REFRESH_SOON_MS : REFRESH_MS;
 }
 
-export function useBoard(stopId: string, limit: number): BoardState {
+/** `from` (ISO, optionnel) : départs à partir de cette heure ; doit rester stable entre les rendus. */
+export function useBoard(stopId: string, limit: number, from?: string): BoardState {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,7 @@ export function useBoard(stopId: string, limit: number): BoardState {
     ctrl.current = c;
     setLoading(true);
     try {
-      const b = await fetchBoard(stopId, limit, c.signal);
+      const b = await fetchBoard(stopId, limit, c.signal, from);
       latest.current = b;
       setBoard(b);
       setError(null);
@@ -60,7 +61,7 @@ export function useBoard(stopId: string, limit: number): BoardState {
     } finally {
       if (ctrl.current === c) setLoading(false);
     }
-  }, [stopId, limit]);
+  }, [stopId, limit, from]);
 
   useEffect(() => {
     setBoard(null);

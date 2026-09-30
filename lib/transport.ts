@@ -85,14 +85,27 @@ export async function nearbyStops(lat: number, lon: number): Promise<NearbyStop[
   return nearestTpgStops(lat, lon, 10);
 }
 
+export type DeparturesOptions = {
+  /** Départs à partir de cette heure (théorique) plutôt que maintenant. */
+  from?: Date;
+  /** Inclure la séquence d'arrêts de chaque course (défaut : oui). */
+  withStops?: boolean;
+};
+
 /**
  * Prochains départs d'un arrêt.
  * @param stop identifiant numérique (recommandé) ou nom exact de l'arrêt
  */
-export async function getDepartures(stop: string, limit = 12): Promise<Board> {
+export async function getDepartures(
+  stop: string,
+  limit = 12,
+  { from, withStops = true }: DeparturesOptions = {},
+): Promise<Board> {
   const byId = /^\d+$/.test(stop);
+  const params: Record<string, string> = { [byId ? "id" : "station"]: stop, limit: String(limit) };
+  if (from) params.datetime = zurichDateTime(from);
   const data = await get<RawStationboard>(
-    `/stationboard?${qs({ [byId ? "id" : "station"]: stop, limit: String(limit) })}`,
+    `/stationboard?${qs(params)}`,
     20, // cache court : les mobiles peuvent poller sans marteler l'API amont
   );
   if (!data.station?.name) throw new NotFoundError(`Arrêt introuvable : ${stop}`);
@@ -100,7 +113,8 @@ export async function getDepartures(stop: string, limit = 12): Promise<Board> {
   const station = toStop(data.station);
   const departures = (data.stationboard ?? [])
     .map((j) => toDeparture(j, station))
-    .filter((d): d is Departure => d !== null);
+    .filter((d): d is Departure => d !== null)
+    .map((d) => (withStops ? d : { ...d, stops: [] }));
 
   return { stop: station, updatedAt: new Date().toISOString(), departures };
 }

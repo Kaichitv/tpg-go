@@ -24,8 +24,11 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function fetchBoard(stop: string, limit: number, signal?: AbortSignal): Promise<Board> {
-  return getJson<Board>(`/api/departures?${new URLSearchParams({ stop, limit: String(limit) })}`, signal);
+/** `from` (ISO) : départs à partir de cette heure, sans séquence d'arrêts (correspondances). */
+export function fetchBoard(stop: string, limit: number, signal?: AbortSignal, from?: string): Promise<Board> {
+  const params = new URLSearchParams({ stop, limit: String(limit) });
+  if (from) params.set("from", from);
+  return getJson<Board>(`/api/departures?${params}`, signal);
 }
 
 export async function fetchStops(q: string, signal?: AbortSignal): Promise<Stop[]> {
