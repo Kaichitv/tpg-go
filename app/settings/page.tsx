@@ -10,6 +10,7 @@ import pkg from "@/package.json";
 export const metadata: Metadata = { title: "Réglages" };
 
 const SOURCE_URL = "https://github.com/Kaichitv/tpg-go";
+const AUTHOR_URL = "https://ludo-jdm.ch";
 
 export default function SettingsPage() {
   return (
@@ -46,6 +47,22 @@ export default function SettingsPage() {
           <ArrowSquareOutIcon size={16} weight="bold" aria-hidden />
           <span className="sr-only">(nouvel onglet)</span>
         </a>
+        <Card
+          as="a"
+          href={AUTHOR_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex min-h-11 items-center justify-between gap-4 px-4 py-3 hover:bg-surface-hover"
+        >
+          <span className="min-w-0">
+            <span className="block text-[16px]">Conçu et développé par Ludovic Jacot-dit-Montandon</span>
+            <span className="block text-[13px] text-muted">
+              Applications sur mesure et sites web ·{" "}<span className="text-accent-ink">ludo-jdm.ch</span>
+            </span>
+          </span>
+          <ArrowSquareOutIcon size={16} weight="bold" aria-hidden className="shrink-0 text-muted" />
+          <span className="sr-only">(nouvel onglet)</span>
+        </Card>
       </Section>
     </Screen>
   );
