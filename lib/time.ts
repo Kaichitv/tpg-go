@@ -48,12 +48,13 @@ export function countdown(iso: string, now: number): Countdown {
   return { kind: "clock", clock: formatClock(iso) };
 }
 
-export function countdownLabel(c: Countdown): string {
+/** `approx` : heure théorique seule (pas de temps réel), à ne pas annoncer comme certaine. */
+export function countdownLabel(c: Countdown, approx = false): string {
   switch (c.kind) {
     case "now":
-      return "départ imminent";
+      return approx ? "départ théorique imminent" : "départ imminent";
     case "minutes":
-      return `dans ${c.minutes} minute${c.minutes > 1 ? "s" : ""}`;
+      return `dans ${approx ? "environ " : ""}${c.minutes} minute${c.minutes > 1 ? "s" : ""}`;
     case "clock":
       return `à ${c.clock}`;
   }

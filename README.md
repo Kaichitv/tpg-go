@@ -32,7 +32,8 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 - **Favoris** (localStorage) : affichés en premier sur l'accueil avec leurs 3 prochains passages ;
   ajout/retrait via l'étoile ; « Modifier » pour réordonner ou supprimer.
 - **Tableau d'un arrêt** (`/stop/[id]`) : badge de ligne, destination, compte à rebours, retard
-  temps réel mis en évidence, mention « théorique » quand la source n'a pas de temps réel.
+  temps réel mis en évidence, mention « théorique » et compte à rebours atténué (« ~2 min »)
+  quand la source n'a pas de temps réel.
 - **Suivi du trajet** : au tap sur un passage, séquence complète des arrêts à venir (champ
   `passList`), heure prévue + temps réel, prochain arrêt mis en avant. La progression est
   **déduite des horaires** : la source ne fournit pas la position GPS du véhicule, et l'UI le dit.
@@ -63,7 +64,7 @@ lib/
   suggestion.ts             validation d'une suggestion (partagée client/serveur)
   discord.ts                envoi des suggestions au webhook Discord (serveur)
   favorites.ts              favoris (localStorage + useSyncExternalStore)
-  useBoard.ts               polling 30 s (visible uniquement), reprise au premier plan
+  useBoard.ts               polling 30 s, 15 s si passage < 3 min (visible uniquement), reprise au premier plan
   progress.ts               progression temporelle d'une course
   lineColors.ts             couleurs de badge + contraste WCAG (overrides → snapshot → orange)
   lineColors.overrides.ts   lignes phares vérifiées à la main, source citée

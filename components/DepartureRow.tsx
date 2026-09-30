@@ -20,7 +20,7 @@ export default function DepartureRow({ departure: d, now, onSelect }: Props) {
 
   const a11y = [
     `${categoryLabel(d.category)} ${d.line} vers ${d.destination}`,
-    countdownLabel(c),
+    countdownLabel(c, noRealtime),
     late ? `retard de ${d.delayMin} minute${d.delayMin! > 1 ? "s" : ""}` : null,
     noRealtime ? "horaire théorique, pas de temps réel" : null,
     d.platform ? `quai ${d.platform}` : null,
@@ -48,7 +48,7 @@ export default function DepartureRow({ departure: d, now, onSelect }: Props) {
       </span>
 
       <span className="flex flex-col items-end" aria-hidden>
-        <Countdown c={c} late={late} />
+        <Countdown c={c} late={late} approx={noRealtime} />
         {late ? (
           <span className="mt-0.5 rounded-full bg-late-bg px-1.5 py-px text-[12px] font-semibold text-late tabular-nums">
             +{d.delayMin} min
@@ -70,8 +70,22 @@ export default function DepartureRow({ departure: d, now, onSelect }: Props) {
   );
 }
 
-function Countdown({ c, late }: { c: ReturnType<typeof countdown>; late: boolean }) {
+/**
+ * Sans temps réel (`approx`), le compte à rebours n'est qu'une estimation d'après
+ * l'horaire théorique : atténué et préfixé de « ~ », jamais de « < 1 min » accentué.
+ */
+function Countdown({ c, late, approx }: { c: ReturnType<typeof countdown>; late: boolean; approx: boolean }) {
   const color = late ? "text-late" : "text-fg";
+  if (approx && c.kind !== "clock") {
+    return (
+      <span className="text-muted tabular-nums">
+        <span className="text-[24px] leading-none font-semibold tracking-tight">
+          ~{c.kind === "now" ? 1 : c.minutes}
+        </span>
+        <span className="ml-0.5 text-[13px] font-medium">min</span>
+      </span>
+    );
+  }
   if (c.kind === "now") {
     return (
       <span className="text-accent-ink tabular-nums">

@@ -1,7 +1,6 @@
 // app/api/departures/route.ts
 // Prochains passages à un arrêt. Toute la logique source est dans lib/transport.ts :
 // appel côté serveur (pas de CORS), cache amont ~20 s, API tierce protégée.
-
 import { errorResponse } from "@/lib/apiResponse";
 import { getDepartures } from "@/lib/transport";
 
@@ -19,7 +18,9 @@ export async function GET(request: Request) {
 
   try {
     const board = await getDepartures(stop, limit);
-    return Response.json(board, { headers: { "Cache-Control": "public, max-age=15" } });
+    // Cache navigateur plus court que le rafraîchissement le plus rapide (15 s, lib/useBoard.ts),
+    // sinon un rafraîchissement sur deux resservirait la réponse précédente.
+    return Response.json(board, { headers: { "Cache-Control": "public, max-age=10" } });
   } catch (err) {
     return errorResponse(err);
   }
