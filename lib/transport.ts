@@ -9,8 +9,12 @@
 import { nearestTpgStops, searchTpgStops } from "./stopIndex";
 import type {
   Board,
+  Connection,
   Departure,
+  Leg,
+  LegStop,
   NearbyStop,
+  RideLeg,
   Stop,
   StopKind,
   TimePoint,
@@ -72,6 +76,21 @@ type RawJourney = {
 };
 
 type RawStationboard = { station?: RawStation | null; stationboard?: RawJourney[] | null };
+
+type RawSection = {
+  journey?: RawJourney | null;
+  walk?: { duration?: number | null } | null;
+  departure?: RawCheckpoint | null;
+  arrival?: RawCheckpoint | null;
+};
+
+type RawConnection = {
+  from?: RawCheckpoint | null;
+  to?: RawCheckpoint | null;
+  sections?: RawSection[] | null;
+};
+
+type RawConnections = { connections?: RawConnection[] | null };
 
 // --- API publique ------------------------------------------------------------------
 
@@ -152,7 +171,114 @@ export async function getTrip(q: TripQuery): Promise<Trip> {
   };
 }
 
+export type ConnectionsOptions = {
+  /** Départs à partir de cette heure plutôt que maintenant. */
+  at?: Date;
+  /** Nombre d'itinéraires demandés (la source peut en renvoyer un peu plus). */
+  limit?: number;
+};
+
+/**
+ * Itinéraires d'un arrêt à un autre, par identifiants uniquement : un nom comme
+ * « Bel-Air » est résolu par la source à l'échelle de la Suisse (Bel-Air LEB,
+ * à Lausanne). La source n'accepte pas non plus de coordonnées : le départ depuis
+ * une position est géré par lib/itinerary.ts.
+ */
+export async function getConnections(
+  fromId: string,
+  toId: string,
+  { at, limit = 5 }: ConnectionsOptions = {},
+): Promise<Connection[]> {
+  const params: Record<string, string> = { from: fromId, to: toId, limit: String(limit) };
+  if (at) {
+    const [date, time] = zurichDateTime(at).split(" ");
+    params.date = date;
+    params.time = time;
+  }
+  const data = await get<RawConnections>(`/connections?${qs(params)}`, 30);
+  return (data.connections ?? []).map(toConnection).filter((c): c is Connection => c !== null);
+}
+
 // --- Mapping -----------------------------------------------------------------------
+
+/** Catégories ferroviaires : leur numéro seul se confondrait avec une ligne TPG (RE 33 ≠ bus 33). */
+const TRAIN_CATEGORIES = new Set([
+  "S", "SN", "R", "RE", "IR", "IC", "ICE", "EC", "EN", "TGV", "IRE", "PE", "EXT", "RJX", "NJ",
+]);
+
+function toConnection(c: RawConnection): Connection | null {
+  const legs: Leg[] = [];
+  for (const s of c.sections ?? []) {
+    const leg = toLeg(s);
+    if (!leg) return null; // section illisible : itinéraire incomplet, on l'écarte
+    legs.push(leg);
+  }
+  const departure = c.from ? timePoint(c.from.departure, c.from.prognosis?.departure, delayOf(c.from)) : null;
+  const arrival = c.to ? timePoint(c.to.arrival, c.to.prognosis?.arrival, delayOf(c.to)) : null;
+  if (!legs.length || !departure || !arrival) return null;
+
+  const rides = legs.filter((l): l is RideLeg => l.kind === "ride");
+  return {
+    key: `${rides.map((r) => r.journey).join("+") || "walk"}@${departure.scheduled}`,
+    departure,
+    arrival,
+    transfers: Math.max(0, rides.length - 1),
+    legs,
+  };
+}
+
+function toLeg(s: RawSection): Leg | null {
+  const dep = s.departure;
+  const arr = s.arrival;
+  if (!dep?.station || !arr?.station) return null;
+
+  const j = s.journey;
+  if (j) {
+    const from = legStop(dep, "departure");
+    const to = legStop(arr, "arrival");
+    if (!from || !to) return null;
+    const operator = j.operator ?? null;
+    const category = j.category ?? "";
+    const number = j.number ?? j.name ?? "?";
+    const isTrain = TRAIN_CATEGORIES.has(category.toUpperCase()) && /^\d+$/.test(number);
+    return {
+      kind: "ride",
+      journey: j.name ?? "",
+      line: isTrain ? `${category} ${number}` : number,
+      category,
+      operator,
+      isTpg: operator === null || operator.toUpperCase() === "TPG",
+      destination: j.to ?? "",
+      from,
+      to,
+      stops: (j.passList ?? []).map((c) => toTripStop(c, null)),
+    };
+  }
+
+  const departure = iso(dep.departure);
+  const arrival = iso(arr.arrival);
+  if (!departure || !arrival) return null;
+  const seconds = s.walk?.duration ?? (new Date(arrival).getTime() - new Date(departure).getTime()) / 1000;
+  return {
+    kind: "walk",
+    from: toStop(dep.station),
+    to: toStop(arr.station),
+    departure,
+    arrival,
+    durationMin: Math.max(1, Math.ceil(seconds / 60)),
+    estimated: false,
+  };
+}
+
+function legStop(c: RawCheckpoint, at: "arrival" | "departure"): LegStop | null {
+  const time = timePoint(c[at], c.prognosis?.[at], delayOf(c));
+  if (!time || !c.station) return null;
+  return { stop: toStop(c.station), time, platform: c.prognosis?.platform ?? c.platform ?? null };
+}
+
+function delayOf(c: RawCheckpoint): number | null {
+  return typeof c.delay === "number" ? c.delay : null;
+}
 
 function toStop(s: RawStation): Stop {
   return {

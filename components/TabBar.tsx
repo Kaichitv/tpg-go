@@ -6,14 +6,16 @@ import { usePathname } from "next/navigation";
 import {
   GearSixIcon,
   MagnifyingGlassIcon,
+  PathIcon,
   StarIcon,
 } from "@phosphor-icons/react/ssr";
 import type { Icon } from "@phosphor-icons/react";
 import { TABS, setOriginTab, tabAt, useOriginTab, type TabId } from "@/lib/tabs";
 
 const ICONS: Record<TabId, Icon> = {
-  search: MagnifyingGlassIcon,
   favorites: StarIcon,
+  search: MagnifyingGlassIcon,
+  itinerary: PathIcon,
   settings: GearSixIcon,
 };
 
@@ -40,7 +42,7 @@ export default function TabBar() {
 
   return (
     <nav aria-label="Navigation principale" className="tab-bar fixed inset-x-0 bottom-0 z-40">
-      <ul className="mx-auto grid h-(--tabbar-h) max-w-xl grid-cols-3">
+      <ul className="mx-auto grid h-(--tabbar-h) max-w-xl grid-cols-4">
         {TABS.map((t) => {
           const Icon = ICONS[t.id];
           const selected = t.id === active.id;

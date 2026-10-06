@@ -26,21 +26,28 @@ export function categoryLabel(category: string): string {
 type Props = {
   line: string;
   category?: string;
-  size?: "md" | "lg";
+  size?: "sm" | "md" | "lg";
+  /**
+   * Ligne d'un autre exploitant (train CFF, Léman Express…) : fond neutre, car les
+   * couleurs connues sont celles des lignes TPG (« RE 33 » n'est pas le bus 33).
+   */
+  neutral?: boolean;
   className?: string;
 };
 
+const SIZING = {
+  sm: "h-7 min-w-8 px-1.5 text-[13px] rounded-[9px]",
+  md: "h-9 min-w-10 px-2 text-[15px] rounded-[11px]",
+  lg: "h-11 min-w-11 px-2.5 text-lg rounded-[13px]",
+} as const;
+
 /** Badge de ligne à sa couleur officielle (orange TPG si inconnue), texte contrasté. */
-export default function LineBadge({ line, category = "", size = "md", className = "" }: Props) {
+export default function LineBadge({ line, category = "", size = "md", neutral = false, className = "" }: Props) {
   const { bg, fg } = getLineColor(line);
-  const sizing =
-    size === "lg"
-      ? "h-11 min-w-11 px-2.5 text-lg rounded-[13px]"
-      : "h-9 min-w-10 px-2 text-[15px] rounded-[11px]";
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center font-bold tabular-nums tracking-tight shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)] ${sizing} ${className}`}
-      style={{ backgroundColor: bg, color: fg }}
+      className={`inline-flex shrink-0 items-center justify-center font-bold whitespace-nowrap tabular-nums tracking-tight shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)] ${SIZING[size]} ${neutral ? "bg-surface-press text-fg" : ""} ${className}`}
+      style={neutral ? undefined : { backgroundColor: bg, color: fg }}
       aria-label={`${categoryLabel(category)} ${line}`}
       role="img"
     >

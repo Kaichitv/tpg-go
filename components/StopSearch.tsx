@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   BoatIcon,
@@ -12,14 +12,9 @@ import {
   TramIcon,
   XCircleIcon,
 } from "@phosphor-icons/react/ssr";
-import { fetchStops, isAbort } from "@/lib/api";
 import type { Stop, StopKind } from "@/lib/types";
+import { MIN_CHARS, useStopSearch } from "@/lib/useStopSearch";
 import StickyBar from "./StickyBar";
-
-const DEBOUNCE_MS = 250;
-const MIN_CHARS = 2;
-
-type Status = "idle" | "loading" | "done" | "error";
 
 type Props = {
   /** Contenu affiché tant qu'aucune recherche n'est en cours (récents, à proximité…). */
@@ -37,35 +32,15 @@ export default function StopSearch({ idle }: Props) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<Stop[]>([]);
-  const [status, setStatus] = useState<Status>("idle");
+  const { q, hits, status } = useStopSearch(query);
   const [active, setActive] = useState(-1);
 
-  const q = query.trim();
-
-  useEffect(() => {
-    if (q.length < MIN_CHARS) {
-      setHits([]);
-      setStatus("idle");
-      return;
-    }
-    setStatus("loading");
-    const ctrl = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const stops = await fetchStops(q, ctrl.signal);
-        setHits(stops);
-        setActive(-1);
-        setStatus("done");
-      } catch (err) {
-        if (!isAbort(err)) setStatus("error");
-      }
-    }, DEBOUNCE_MS);
-    return () => {
-      clearTimeout(t);
-      ctrl.abort();
-    };
-  }, [q]);
+  // Nouveaux résultats : plus d'option active (ajustement pendant le rendu, cf. doc React).
+  const [shownHits, setShownHits] = useState(hits);
+  if (hits !== shownHits) {
+    setShownHits(hits);
+    setActive(-1);
+  }
 
   const pick = (s: Stop) => {
     router.push(`/stop/${encodeURIComponent(s.id)}?name=${encodeURIComponent(s.name)}`);
@@ -178,7 +153,7 @@ export default function StopSearch({ idle }: Props) {
   );
 }
 
-function KindIcon({ kind }: { kind: StopKind }) {
+export function KindIcon({ kind }: { kind: StopKind }) {
   const props = { size: 20, "aria-hidden": true, className: "shrink-0 text-muted" } as const;
   switch (kind) {
     case "tram":
@@ -195,7 +170,7 @@ function KindIcon({ kind }: { kind: StopKind }) {
 }
 
 /** Met en gras la partie correspondant à la recherche (insensible casse/accents/ponctuation). */
-function Highlight({ text, query }: { text: string; query: string }) {
+export function Highlight({ text, query }: { text: string; query: string }) {
   // Normalisation caractère par caractère : garde les indices alignés sur `text`.
   const fold = (s: string) =>
     s

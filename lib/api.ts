@@ -3,7 +3,7 @@
 // les types de lib/types.ts — jamais la source tierce.
 
 import type { Suggestion } from "./suggestion";
-import type { Board, NearbyStop, Stop, Trip, TripQuery } from "./types";
+import type { Board, ConnectionsResult, Endpoint, NearbyStop, Stop, Trip, TripQuery } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -45,6 +45,16 @@ export async function fetchNearby(lat: number, lon: number, signal?: AbortSignal
 export function fetchTrip(q: TripQuery, signal?: AbortSignal): Promise<Trip> {
   const params = new URLSearchParams({ journey: q.journey, line: q.line, stop: q.stopId, at: q.at });
   return getJson<Trip>(`/api/trip?${params}`, signal);
+}
+
+export function fetchConnections(from: Endpoint, to: Endpoint, signal?: AbortSignal): Promise<ConnectionsResult> {
+  const params = new URLSearchParams({ from: endpointParam(from), to: endpointParam(to) });
+  return getJson<ConnectionsResult>(`/api/connections?${params}`, signal);
+}
+
+/** Arrêt → id ; position → « lat,lon » arrondis à ~10 m (suffisant pour estimer la marche). */
+function endpointParam(e: Endpoint): string {
+  return e.kind === "stop" ? e.stopId : `${e.lat.toFixed(4)},${e.lon.toFixed(4)}`;
 }
 
 /** `website` : pot de miel anti-robots, laissé vide par un humain. */

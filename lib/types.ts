@@ -75,6 +75,71 @@ export type Trip = {
   stops: TripStop[];
 };
 
+/** Extrémité d'un itinéraire : un arrêt TPG (id DIDOK) ou une position (WGS84). */
+export type Endpoint = { kind: "stop"; stopId: string } | { kind: "position"; lat: number; lon: number };
+
+/** Montée ou descente d'une étape en transport. */
+export type LegStop = {
+  stop: Stop;
+  time: TimePoint;
+  platform: string | null;
+};
+
+/** Étape à bord d'une course. */
+export type RideLeg = {
+  kind: "ride";
+  /** Identifiant de course chez la source (sert à suivre le trajet). */
+  journey: string;
+  /** Libellé affiché : « 12 », « L4 », « RE 33 »… */
+  line: string;
+  category: string;
+  operator: string | null;
+  /** Ligne exploitée par les TPG : seules celles-ci prennent les couleurs officielles. */
+  isTpg: boolean;
+  destination: string;
+  from: LegStop;
+  to: LegStop;
+  /** Arrêts de la course, de la montée à la descente (incluses). */
+  stops: TripStop[];
+};
+
+/** Étape à pied (correspondance, ou trajet depuis / vers une position). */
+export type WalkLeg = {
+  kind: "walk";
+  /** null = position de l'utilisateur. */
+  from: Stop | null;
+  to: Stop | null;
+  departure: string;
+  arrival: string;
+  durationMin: number;
+  /** Durée estimée par TPG Go à vol d'oiseau, et non fournie par la source. */
+  estimated: boolean;
+};
+
+export type Leg = RideLeg | WalkLeg;
+
+export type Connection = {
+  /** Clé unique stable : courses empruntées + heure de départ théorique. */
+  key: string;
+  /** Heure à laquelle se mettre en route (marche initiale comprise). */
+  departure: TimePoint;
+  arrival: TimePoint;
+  /** Nombre de changements de véhicule. */
+  transfers: number;
+  legs: Leg[];
+};
+
+/** Extrémité choisie dans l'UI : un arrêt, ou la position de l'appareil (localisée au besoin). */
+export type Place = { kind: "position" } | { kind: "stop"; id: string; name: string };
+
+/** Saisie de l'onglet Itinéraire (un champ peut être vide). */
+export type ItineraryQuery = { from: Place | null; to: Place | null };
+
+export type ConnectionsResult = {
+  updatedAt: string;
+  connections: Connection[];
+};
+
 /** Heure effective (temps réel si dispo, sinon théorique). */
 export function effectiveTime(t: TimePoint | null): string | null {
   return t ? (t.realtime ?? t.scheduled) : null;

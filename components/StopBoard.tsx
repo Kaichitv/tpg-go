@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { CaretLeftIcon } from "@phosphor-icons/react/ssr";
+import { CaretLeftIcon, PathIcon } from "@phosphor-icons/react/ssr";
 import { addRecent } from "@/lib/recents";
 import { splitStopName } from "@/lib/stopName";
 import { useOriginTab } from "@/lib/tabs";
@@ -59,11 +59,22 @@ export default function StopBoard({ id, initialName }: Props) {
         </nav>
       </StickyBar>
 
-      <header className="mt-2 mb-1 px-1">
-        {place && <p className="text-[15px] font-medium text-muted">{place}</p>}
-        <h1 ref={titleRef} className="text-[30px] leading-tight font-bold tracking-tight">
-          {stop || "Arrêt"}
-        </h1>
+      <header className="mt-2 mb-1 flex items-end gap-3 px-1">
+        <div className="min-w-0 flex-1">
+          {place && <p className="text-[15px] font-medium text-muted">{place}</p>}
+          <h1 ref={titleRef} className="text-[30px] leading-tight font-bold tracking-tight">
+            {stop || "Arrêt"}
+          </h1>
+        </div>
+        {/* On cherche parfois son arrêt d'arrivée : itinéraire depuis ma position jusqu'ici. */}
+        <Link
+          href={`/itinerary?to=${encodeURIComponent(id)}`}
+          className="mb-0.5 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-accent/15 px-4 text-[15px] font-semibold text-accent-ink hover:bg-accent/20"
+        >
+          <PathIcon size={18} weight="bold" aria-hidden />
+          Y aller
+          {fullName && <span className="sr-only"> : itinéraire jusqu’à {fullName}</span>}
+        </Link>
       </header>
 
       <div className="px-1">

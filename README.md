@@ -1,6 +1,6 @@
 # TPG Go
 
-PWA Next.js 15 des prochains passages TPG en temps réel, avec favoris et suivi de trajet.
+PWA Next.js 15 des prochains passages TPG en temps réel, avec favoris, itinéraires et suivi de trajet.
 Installable sur mobile, coquille disponible hors-ligne, hébergeable sur Vercel (offre gratuite).
 
 ## Lancer en local
@@ -17,11 +17,15 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 
 ## Fonctionnalités (v1)
 
-- **Navigation** : tabbar en bas (Recherche, Favoris, Réglages), toujours visible ; la page
-  d'un arrêt garde son onglet d'origine sélectionné et y revient.
+- **Navigation** : tabbar en bas (Favoris, Recherche, Itinéraire, Réglages), toujours visible ;
+  la page d'un arrêt garde son onglet d'origine sélectionné et y revient.
 - **Recherche** : champ vide → arrêts récents (hors favoris) puis arrêts à proximité (distance
   à vol d'oiseau, prochains passages) ; la position n'est demandée qu'au geste, sauf si déjà
   autorisée.
+- **Itinéraire** : d'un arrêt ou de ma position à un arrêt TPG, prochains itinéraires (lignes,
+  marche, changements, compte à rebours, temps réel). Favoris et récents comme destinations en un
+  toucher ; bouton **Y aller** sur la page d'un arrêt. Marche depuis la position **estimée** et
+  signalée comme telle. Détails : [docs/itinerary.md](docs/itinerary.md).
 - **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
   (nom + texte, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), version et sources.
 
@@ -45,31 +49,38 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 app/
   page.tsx                  onglet Favoris (accueil)
   search/page.tsx           onglet Recherche (recherche, récents, à proximité)
+  itinerary/page.tsx        onglet Itinéraire (?from=&to=, id d'arrêt ou « here »)
   settings/page.tsx         onglet Réglages (thème, suggestions, à propos)
   stop/[id]/page.tsx        tableau des passages d'un arrêt (poussé dans l'onglet d'origine)
   api/departures/route.ts   prochains passages (?stop=<id|nom>&limit=)
   api/locations/route.ts    recherche d'arrêts (?q=)
   api/nearby/route.ts       arrêts proches (?lat=&lon=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
+  api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « lat,lon »)
   api/suggestions/route.ts  POST d'une suggestion { name, message } → webhook Discord
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
-                            FavStar, TripSheet, FavoriteCard, StatusLine…
+                            FavStar, TripSheet, FavoriteCard, StatusLine, ItineraryScreen,
+                            RouteFields, ConnectionCard…
 lib/
   types.ts                  modèle de domaine partagé (indépendant de la source)
   transport.ts              SEUL module qui connaît transport.opendata.ch (serveur)
   stopIndex.ts              recherche / proximité dans les arrêts TPG (serveur)
+  itinerary.ts              itinéraires depuis / vers une position : arrêts proches + marche estimée (serveur)
   tpgStops.json             snapshot committé, généré par scripts/build-tpg-stops.mjs
   api.ts                    fetchers client vers /api/*
   suggestion.ts             validation d'une suggestion (partagée client/serveur)
   discord.ts                envoi des suggestions au webhook Discord (serveur)
   favorites.ts              favoris (localStorage + useSyncExternalStore)
   useBoard.ts               polling 30 s, 15 s si passage < 3 min (visible uniquement), reprise au premier plan
+  useConnections.ts         itinéraires, actualisés toutes les 60 s (visible uniquement)
+  useStopSearch.ts          autocomplétion d'arrêts (recherche et champs d'itinéraire)
   progress.ts               progression temporelle d'une course
   lineColors.ts             couleurs de badge + contraste WCAG (overrides → snapshot → orange)
   lineColors.overrides.ts   lignes phares vérifiées à la main, source citée
   lineColors.fallback.json  snapshot committé, généré par scripts/build-line-colors.mjs
 public/sw.js                service worker (jamais de cache /api/*)
+docs/itinerary.md           documentation de la fonctionnalité Itinéraire
 scripts/                    build-line-colors.mjs, build-tpg-stops.mjs, build-icons.mjs, test-api.mjs
                             lib/gtfs.mjs (lecture partagée du GTFS : Range, zip, CSV, flux)
 assets/tpg-go-icon.png      image maître des icônes (non servie)
@@ -160,9 +171,13 @@ npm run test:api "Bel-Air"
 
 ## Limites connues
 
-- API communautaire transport.opendata.ch plafonnée (~1000 req/jour/IP), d'où le cache serveur.
+- API communautaire transport.opendata.ch partagée : pas de quota fixe annoncé, mais les requêtes
+  répétées sont ralenties (doc consultée en oct. 2026), d'où le cache serveur. Un itinéraire depuis
+  une position coûte jusqu'à 3 appels.
 - Temps réel non garanti pour l'urbain ; affiché « théorique » quand absent.
 - Pas de position GPS des véhicules en v1 (GTFS-RT officiel prévu en v2).
+- Itinéraires : départ immédiat uniquement, marche estimée à vol d'oiseau, lignes non TPG (Léman
+  Express, CFF) en badge neutre faute de couleurs officielles (voir [docs/itinerary.md](docs/itinerary.md)).
 - Anti-abus des suggestions « best effort » (pot de miel, même origine, 5 envois / 10 min par IP
   en mémoire de l'instance serverless, remis à zéro au démarrage à froid).
 

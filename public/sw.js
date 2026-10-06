@@ -2,13 +2,13 @@
 // Rend l'app installable et sa coquille disponible hors-ligne.
 // RÈGLE ABSOLUE : on ne met JAMAIS en cache /api/* (horaires toujours frais).
 
-const VERSION = "tpg-go-v4";
+const VERSION = "tpg-go-v5";
 const PAGES = `${VERSION}-pages`;
 const ASSETS = `${VERSION}-assets`;
 const MAX_ASSETS = 200;
 
 // Écrans racines des onglets : disponibles hors-ligne dès la première visite.
-const TAB_PAGES = ["/", "/search", "/settings"];
+const TAB_PAGES = ["/", "/search", "/itinerary", "/settings"];
 const SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

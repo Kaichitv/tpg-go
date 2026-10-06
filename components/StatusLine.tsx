@@ -10,10 +10,19 @@ type Props = {
   error: string | null;
   offline: boolean;
   onRefresh: () => void;
+  /** Libellé accessible du bouton d'actualisation. */
+  refreshLabel?: string;
 };
 
 /** « Mis à jour il y a… » + état réseau + bouton d'actualisation. */
-export default function StatusLine({ updatedAt, loading, error, offline, onRefresh }: Props) {
+export default function StatusLine({
+  updatedAt,
+  loading,
+  error,
+  offline,
+  onRefresh,
+  refreshLabel = "Actualiser les passages",
+}: Props) {
   const now = useNow(5_000);
 
   let text: React.ReactNode = loading ? "Actualisation…" : null;
@@ -34,7 +43,7 @@ export default function StatusLine({ updatedAt, loading, error, offline, onRefre
       <p className="text-[13px] text-muted" aria-live="polite">
         {text}
       </p>
-      <IconButton label="Actualiser les passages" onClick={onRefresh} disabled={loading} className="text-muted">
+      <IconButton label={refreshLabel} onClick={onRefresh} disabled={loading} className="text-muted">
         <ArrowClockwiseIcon size={20} aria-hidden className={loading ? "animate-spin" : ""} />
       </IconButton>
     </div>

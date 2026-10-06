@@ -7,14 +7,15 @@
 
 import { useSyncExternalStore } from "react";
 
-export type TabId = "search" | "favorites" | "settings";
+export type TabId = "favorites" | "search" | "itinerary" | "settings";
 
 export type Tab = { id: TabId; href: string; label: string };
 
 /** Ordre d'affichage dans la tabbar. L'accueil (« / ») est l'onglet Favoris. */
 export const TABS: readonly Tab[] = [
-  { id: "search", href: "/search", label: "Recherche" },
   { id: "favorites", href: "/", label: "Favoris" },
+  { id: "search", href: "/search", label: "Recherche" },
+  { id: "itinerary", href: "/itinerary", label: "Itinéraire" },
   { id: "settings", href: "/settings", label: "Réglages" },
 ];
 
