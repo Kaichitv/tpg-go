@@ -23,7 +23,8 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
   à vol d'oiseau, prochains passages) ; la position n'est demandée qu'au geste, sauf si déjà
   autorisée.
 - **Itinéraire** : d'un arrêt ou de ma position à un arrêt TPG, prochains itinéraires (lignes,
-  marche, changements, compte à rebours, temps réel). Favoris et récents comme destinations en un
+  marche, changements, compte à rebours, temps réel), détail en feuille (frise des étapes, quais,
+  arrêts intermédiaires) et **Suivre** une étape TPG. Favoris et récents comme destinations en un
   toucher ; bouton **Y aller** sur la page d'un arrêt. Marche depuis la position **estimée** et
   signalée comme telle. Détails : [docs/itinerary.md](docs/itinerary.md).
 - **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
@@ -61,7 +62,7 @@ app/
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
                             FavStar, TripSheet, FavoriteCard, StatusLine, ItineraryScreen,
-                            RouteFields, ConnectionCard…
+                            RouteFields, ConnectionCard, ConnectionSheet…
 lib/
   types.ts                  modèle de domaine partagé (indépendant de la source)
   transport.ts              SEUL module qui connaît transport.opendata.ch (serveur)

@@ -11,17 +11,19 @@ import {
 import { useHydrated } from "@/lib/favorites";
 import { splitStopName } from "@/lib/stopName";
 import { useNow } from "@/lib/time";
-import type { Endpoint, ItineraryQuery, Place } from "@/lib/types";
+import type { Connection, Departure, Endpoint, ItineraryQuery, Place, RideLeg } from "@/lib/types";
 import { useConnections } from "@/lib/useConnections";
 import { useGeolocation, type GeoState } from "@/lib/useGeolocation";
 import { useStopShortcuts } from "@/lib/useStopShortcuts";
 import BoardSkeleton from "./BoardSkeleton";
 import Card from "./Card";
 import ConnectionCard from "./ConnectionCard";
+import ConnectionSheet from "./ConnectionSheet";
 import RouteFields, { type Field } from "./RouteFields";
 import Screen from "./Screen";
 import Section from "./Section";
 import StatusLine from "./StatusLine";
+import TripSheet from "./TripSheet";
 
 const DEFAULT_QUERY: ItineraryQuery = { from: { kind: "position" }, to: null };
 /** Un itinéraire dont le départ est passé depuis plus longtemps est masqué en attendant l'actualisation. */
@@ -44,6 +46,10 @@ type Props = {
 export default function ItineraryScreen({ initial }: Props) {
   const [query, setQuery] = useState<ItineraryQuery>(() => initial ?? lastQuery ?? DEFAULT_QUERY);
   const [editing, setEditing] = useState<Field | null>(null);
+  // Détail ouvert, et étape suivie depuis ce détail (feuille de suivi du trajet).
+  const [selected, setSelected] = useState<Connection | null>(null);
+  const [following, setFollowing] = useState<number | null>(null);
+  const [returnTo, setReturnTo] = useState<number | null>(null);
   const { state: geo, locate } = useGeolocation();
   const now = useNow(15_000);
 
@@ -65,6 +71,9 @@ export default function ItineraryScreen({ initial }: Props) {
   const from = useMemo(() => endpoint(query.from, lat, lon), [query.from, lat, lon]);
   const to = useMemo(() => endpoint(query.to, lat, lon), [query.to, lat, lon]);
   const { result, error, loading, offline, refresh } = useConnections(from, to);
+  // Le détail suit les actualisations ; si l'itinéraire n'est plus proposé, on garde la dernière version.
+  const detail = selected ? (result?.connections.find((c) => c.key === selected.key) ?? selected) : null;
+  const followedLeg = detail && following !== null ? detail.legs[following] : undefined;
 
   const positionField: Field | null =
     query.from?.kind === "position" ? "from" : query.to?.kind === "position" ? "to" : null;
@@ -124,7 +133,14 @@ export default function ItineraryScreen({ initial }: Props) {
               <ol className="divide-y divide-hairline">
                 {visible.map((c) => (
                   <li key={c.key}>
-                    <ConnectionCard connection={c} now={now} />
+                    <ConnectionCard
+                      connection={c}
+                      now={now}
+                      onSelect={(sel) => {
+                        setReturnTo(null);
+                        setSelected(sel);
+                      }}
+                    />
                   </li>
                 ))}
               </ol>
@@ -156,6 +172,33 @@ export default function ItineraryScreen({ initial }: Props) {
     <Screen title="Itinéraire">
       <RouteFields query={query} editing={editing} onEdit={setEditing} onPick={pick} onSwap={swap} />
       {!editing && content}
+
+      {detail && following === null && (
+        <ConnectionSheet
+          key={detail.key}
+          connection={detail}
+          now={now ?? Date.now()}
+          focusLeg={returnTo}
+          onClose={() => setSelected(null)}
+          onFollow={setFollowing}
+        />
+      )}
+      {detail && followedLeg?.kind === "ride" && (
+        <TripSheet
+          key={`${detail.key}-${following}`}
+          departure={legDeparture(followedLeg)}
+          originName={followedLeg.from.stop.name}
+          alightId={followedLeg.to.stop.id}
+          onBack={() => {
+            setReturnTo(following);
+            setFollowing(null);
+          }}
+          onClose={() => {
+            setFollowing(null);
+            setSelected(null);
+          }}
+        />
+      )}
     </Screen>
   );
 }
@@ -303,6 +346,24 @@ function Notice({ children }: { children: ReactNode }) {
       {children}
     </p>
   );
+}
+
+/** Étape d'un itinéraire vue comme un passage à l'arrêt de montée, pour la feuille de suivi. */
+function legDeparture(l: RideLeg): Departure {
+  const { scheduled, realtime } = l.from.time;
+  return {
+    key: `${l.journey}@${scheduled}`,
+    journey: l.journey,
+    line: l.line,
+    category: l.category,
+    operator: l.operator,
+    destination: l.destination,
+    scheduled,
+    realtime,
+    delayMin: realtime ? Math.round((new Date(realtime).getTime() - new Date(scheduled).getTime()) / 60_000) : null,
+    platform: l.from.platform,
+    stops: l.stops,
+  };
 }
 
 function endpoint(place: Place | null, lat: number | null, lon: number | null): Endpoint | null {

@@ -248,7 +248,7 @@ function toLeg(s: RawSection): Leg | null {
       category,
       operator,
       isTpg: operator === null || operator.toUpperCase() === "TPG",
-      destination: j.to ?? "",
+      destination: placeName(j.to),
       from,
       to,
       stops: (j.passList ?? []).map((c) => toTripStop(c, null)),
@@ -280,10 +280,21 @@ function delayOf(c: RawCheckpoint): number | null {
   return typeof c.delay === "number" ? c.delay : null;
 }
 
+/**
+ * Noms de la source ambigus pour un usager genevois. La gare CFF s'appelle
+ * « Genève » tout court (id 8501008) : on la nomme comme ses voisines
+ * (Genève-Aéroport, Genève-Champel…), distincte de l'arrêt TPG « Genève, gare Cornavin ».
+ */
+const RENAMED: Readonly<Record<string, string>> = { "Genève": "Genève-Cornavin" };
+
+function placeName(name: string | null | undefined): string {
+  return name ? (RENAMED[name] ?? name) : "";
+}
+
 function toStop(s: RawStation): Stop {
   return {
     id: s.id ?? "",
-    name: s.name ?? "",
+    name: placeName(s.name),
     kind: toKind(s.icon),
     lat: s.coordinate?.x ?? null,
     lon: s.coordinate?.y ?? null,
@@ -324,7 +335,7 @@ function toDeparture(j: RawJourney, station: Stop): Departure | null {
     line,
     category: j.category ?? "",
     operator: j.operator ?? null,
-    destination: j.to ?? "",
+    destination: placeName(j.to),
     scheduled,
     realtime,
     delayMin,
@@ -337,7 +348,7 @@ function toTripStop(c: RawCheckpoint, self: Stop | null): TripStop {
   const delayMin = typeof c.delay === "number" ? c.delay : null;
   return {
     id: self?.id ?? c.station?.id ?? "",
-    name: self?.name ?? c.station?.name ?? "",
+    name: self?.name ?? placeName(c.station?.name),
     arrival: timePoint(c.arrival, c.prognosis?.arrival, delayMin),
     departure: timePoint(c.departure, c.prognosis?.departure, delayMin),
     delayMin,

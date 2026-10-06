@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CaretRightIcon, FlagCheckeredIcon, WarningIcon, XIcon } from "@phosphor-icons/react/ssr";
+import { CaretLeftIcon, CaretRightIcon, FlagCheckeredIcon, WarningIcon, XIcon } from "@phosphor-icons/react/ssr";
 import { fetchTrip, isAbort } from "@/lib/api";
 import { getLineColor } from "@/lib/lineColors";
 import { computeProgress, type StopState } from "@/lib/progress";
@@ -17,6 +17,10 @@ type Props = {
   departure: Departure;
   originName: string;
   onClose: () => void;
+  /** Ouverte depuis le détail d'un itinéraire : chevron de retour, et Échap y revient. */
+  onBack?: () => void;
+  /** Arrêt de descente (itinéraire) : la liste s'y arrête et le signale. */
+  alightId?: string;
 };
 
 /** Arrêt dont on consulte les correspondances (index + id : la liste est rafraîchie). */
@@ -28,7 +32,7 @@ type Selected = { index: number; id: string };
  * La progression est DÉDUITE DES HORAIRES — aucune position GPS n'est affichée.
  * Toucher un arrêt à venir ouvre, dans la même feuille, ses correspondances.
  */
-export default function TripSheet({ departure: d, originName, onClose }: Props) {
+export default function TripSheet({ departure: d, originName, onClose, onBack, alightId }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const nextRef = useRef<HTMLLIElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -37,7 +41,10 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
   const [stale, setStale] = useState(false);
   const now = useNow(15_000) ?? Date.now();
 
-  const progress = useMemo(() => computeProgress(stops, now), [stops, now]);
+  // Depuis un itinéraire, on affiche la course jusqu'à l'arrêt de descente seulement.
+  const alightIndex = alightId ? stops.findIndex((s, i) => i > 0 && s.id === alightId) : -1;
+  const shown = useMemo(() => (alightIndex > 0 ? stops.slice(0, alightIndex + 1) : stops), [stops, alightIndex]);
+  const progress = useMemo(() => computeProgress(shown, now), [shown, now]);
   const { bg: lineColor } = getLineColor(d.line);
   const hasRealtime = stops.some((s) => (s.departure ?? s.arrival)?.realtime);
 
@@ -139,10 +146,14 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
       aria-labelledby={inConnections ? connectionsTitleId : titleId}
       onClose={onClose}
       onCancel={(e) => {
-        // Échap dans les correspondances : retour au trajet plutôt que fermeture.
+        // Échap dans les correspondances : retour au trajet plutôt que fermeture ;
+        // ouverte depuis un itinéraire : retour à son détail.
         if (inConnections) {
           e.preventDefault();
           closeConnections();
+        } else if (onBack) {
+          e.preventDefault();
+          onBack();
         }
       }}
       onClick={(e) => {
@@ -168,6 +179,11 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
         <header className="shrink-0 border-b border-hairline px-4 pt-2 pb-3">
           <div aria-hidden className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-hairline" />
           <div className="flex items-center gap-3">
+            {onBack && (
+              <IconButton label="Retour à l’itinéraire" onClick={onBack} className="-mr-1 -ml-2">
+                <CaretLeftIcon size={22} weight="bold" aria-hidden />
+              </IconButton>
+            )}
             <LineBadge line={d.line} category={d.category} size="lg" />
             <div className="min-w-0 flex-1">
               <h2 id={titleId} className="truncate text-[20px] leading-tight font-semibold">
@@ -180,7 +196,11 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
                 Depuis {originName} · {formatClock(d.realtime ?? d.scheduled)}
               </p>
             </div>
-            <IconButton label="Fermer le trajet" onClick={() => dialog.current?.close()} className="-mr-2">
+            <IconButton
+              label={onBack ? "Fermer" : "Fermer le trajet"}
+              onClick={() => dialog.current?.close()}
+              className="-mr-2"
+            >
               <XIcon size={22} aria-hidden />
             </IconButton>
           </div>
@@ -188,7 +208,8 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
           <div className="mt-2 flex items-center justify-between gap-2 text-[13px]" aria-live="polite">
             {progress.finished ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-muted">
-                <FlagCheckeredIcon size={16} aria-hidden /> Course terminée
+                <FlagCheckeredIcon size={16} aria-hidden />
+                {alightIndex > 0 ? `Arrivée à ${shown[alightIndex].name}` : "Course terminée"}
               </span>
             ) : next && nextTime ? (
               <span className="font-medium text-accent-ink">
@@ -217,7 +238,7 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
           className="overflow-y-auto overscroll-contain py-2 pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <ol aria-label="Arrêts de la course">
-            {stops.map((s, i) => (
+            {shown.map((s, i) => (
               <StopItem
                 key={`${s.id}-${i}`}
                 ref={i === progress.nextIndex ? nextRef : undefined}
@@ -225,7 +246,8 @@ export default function TripSheet({ departure: d, originName, onClose }: Props) 
                 stop={s}
                 state={progress.states[i]}
                 first={i === 0}
-                last={i === stops.length - 1}
+                last={i === shown.length - 1}
+                alight={i === alightIndex}
                 color={lineColor}
                 now={now}
                 onSelect={
@@ -248,6 +270,8 @@ type ContentProps = {
   state: StopState;
   first: boolean;
   last: boolean;
+  /** Arrêt où descendre (suivi depuis un itinéraire). */
+  alight?: boolean;
   color: string;
   now: number;
 };
@@ -286,7 +310,7 @@ function StopItem({ index, onSelect, ref, ...content }: ItemProps) {
   );
 }
 
-function StopItemContent({ stop, state, first, last, color, now }: ContentProps) {
+function StopItemContent({ stop, state, first, last, alight = false, color, now }: ContentProps) {
   const passed = state === "passed";
   const current = state === "next" || state === "dwelling";
   const t = timeOf(stop);
@@ -319,10 +343,11 @@ function StopItemContent({ stop, state, first, last, color, now }: ContentProps)
 
       <span className={`min-w-0 flex-1 py-2.5 ${passed ? "opacity-55" : ""}`}>
         <span className={`block truncate text-[16px] ${current ? "font-semibold" : ""}`}>{stop.name}</span>
-        {current && (
+        {(current || alight) && (
           <span className="block text-[12px] font-medium text-accent-ink">
-            {state === "dwelling" ? "À l’arrêt" : "Prochain arrêt"}
+            {current && (state === "dwelling" ? "À l’arrêt" : "Prochain arrêt")}
             {state === "next" && t ? ` · ${relative(t, now)}` : ""}
+            {alight && `${current ? " · " : ""}Descendre ici`}
           </span>
         )}
         <span className="sr-only">{passed ? " (desservi)" : ""}</span>

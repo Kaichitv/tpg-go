@@ -54,6 +54,58 @@ Depuis Bel-Air · 2 changements    Partir dans 1 min
   retour du réseau ; un itinéraire dont le départ est passé de plus d'une minute est masqué.
 - En cas d'échec d'actualisation, les derniers résultats restent affichés, signalés comme
   non actualisés.
+- Toucher une carte ouvre son **détail** (ci-dessous).
+
+### Détail d'un itinéraire
+
+Feuille modale par le bas (même schéma que le suivi de trajet : `<dialog>` natif, poignée,
+fond flouté, Échap ou toucher le fond pour fermer).
+
+```
+10:45 → 11:05                                   ✕
+20 min · 1 changement · Partir dans 7 min
+───────────────────────────────────────────────
+10:45  ○  Ma position
+estimé ┊  🚶 ~3 min à pied (estimation)
+10:48  ●  Genève, Bel-Air                 Quai C
+       ┃  [20] Direction Bellevue GE, Valavran
+       ┃  2 arrêts · 5 min ⌄            [Suivre]
+10:53  ●  Genève, gare Cornavin           Quai J
+       ┊  🚶 4 min à pied · 1 min d'attente
+10:58  ●  Genève-Cornavin                 Voie 3
+       ┃  [IR 90] Direction Genève-Aéroport
+11:05  ●  Genève-Aéroport                 Voie 3
+```
+
+- **Frise** : heure à gauche, rail au centre (trait à la couleur de la ligne, gris pour les
+  lignes non TPG, pointillés pour la marche et les correspondances), arrêt à droite.
+- **Heures** : effective (temps réel si disponible) ; en dessous, l'heure prévue barrée en cas
+  d'écart, « prévu » sans temps réel, « estimé » pour une heure calculée par TPG Go (marche
+  depuis / vers ma position).
+- **Quais** : lettre → « Quai F » (TPG), chiffre → « Voie 3 » (trains).
+- **Étape à bord** : badge, direction, « N arrêts · M min » ; ce libellé déplie / replie les
+  arrêts intermédiaires (heure + nom, petits points sur le rail).
+- **Entre deux étapes** : marche (« ~ » si estimée) avec l'attente éventuelle avant le départ
+  suivant, ou « Correspondance · 2 min » quand on change au même arrêt.
+- Le détail suit les actualisations de la liste (retards). Si l'itinéraire disparaît des
+  résultats (départ passé), la feuille garde sa dernière version.
+
+### Suivre une étape
+
+Le bouton **Suivre** d'une étape TPG ouvre la feuille de suivi existante (`TripSheet`) sur
+cette course :
+
+- liste limitée de l'arrêt de montée à l'arrêt de **descente**, signalé « Descendre ici » ;
+  une fois passé, l'en-tête indique « Arrivée à … » au lieu de « Course terminée » ;
+- chevron **retour** (et Échap) : on revient au détail, le focus reprend sur le bouton
+  « Suivre » touché ; ✕ ou toucher le fond ferme tout ;
+- progression **déduite des horaires**, comme partout dans l'app ; les correspondances d'un
+  arrêt restent accessibles.
+
+« Suivre » n'est proposé que pour les lignes TPG et tant que l'étape n'est pas terminée : le
+suivi retrouve la course dans le tableau des passages de l'arrêt (même identifiant de course
+et même numéro de ligne, vérifié). Pour les trains, le libellé affiché (« IR 90 ») ne
+correspond pas au numéro du tableau, et la correspondance n'est pas garantie.
 
 ### Position
 
@@ -135,6 +187,10 @@ Mapping vers le domaine :
 - `isTpg` = exploitant `TPG` (ou absent). Les autres lignes ont un **badge neutre** : les couleurs
   connues sont celles des lignes TPG, on n'en invente pas pour les autres.
 - Un itinéraire dont une section est illisible est écarté plutôt qu'affiché incomplet.
+- La gare CFF s'appelle « Genève » tout court dans la source (id 8501008) : elle est affichée
+  **« Genève-Cornavin »**, comme ses voisines (Genève-Aéroport, Genève-Champel…) et distincte de
+  l'arrêt TPG « Genève, gare Cornavin ». Le renommage est fait dans `lib/transport.ts`
+  (`RENAMED`) et vaut aussi pour les directions et les tableaux de passages.
 
 ## Départ depuis ma position (`lib/itinerary.ts`)
 
@@ -182,15 +238,23 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 
 - Champs de saisie en combobox ARIA (`aria-activedescendant`), annonce du nombre de résultats.
 - Après un choix ou une annulation, le focus revient sur le champ modifié.
-- Chaque carte a un résumé complet pour les lecteurs d'écran (« Départ 14:57, arrivée 15:23,
-  26 minutes. Environ 3 minutes à pied jusqu'à Genève, Bel-Air, puis Bus 3… »).
+- Chaque carte est un bouton (`aria-haspopup="dialog"`) avec un résumé complet pour les lecteurs
+  d'écran (« Départ 14:57, arrivée 15:23, 26 minutes. Environ 3 minutes à pied jusqu'à Genève,
+  Bel-Air, puis Bus 3… Voir le détail »).
+- Détail : feuille modale native (focus piégé, fond inerte), titre annoncé, frise en liste
+  ordonnée, dépliage des arrêts en `aria-expanded`, « Suivre » complété pour les lecteurs
+  d'écran (« Suivre le trajet de la ligne 20 »). Bouton « Suivre » : 5,2:1 en clair, 6,3:1 en
+  sombre.
+- Nombres et unités liés par des espaces insécables (« 1 changement », « 20 min »).
 - Cibles ≥ 44 px ; bouton « Y aller » : texte `accent-ink` sur `accent/15`, 4,8:1 en clair et
   8,3:1 en sombre (survol à `accent/20`, au-delà on passe sous AA en clair).
 
 ## Limites actuelles
 
 - Départ immédiat uniquement : pas encore de « Partir à… » / « Arriver à… » ni de « Plus tard ».
-- Pas de détail par étape (arrêt de descente, nombre d'arrêts, quai) ni de suivi d'une étape.
+- « Suivre » limité aux lignes TPG.
+- Retour du suivi au détail : la feuille de détail est rouverte (les arrêts dépliés sont
+  repliés).
 - Pas de carte.
 - Pas de raccourci itinéraire dans la liste de résultats de la recherche (seulement « Y aller »
   sur la page d'un arrêt).
@@ -201,9 +265,8 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 
 1. Raccourci ⤳ dans les résultats de la recherche : bouton secondaire par ligne (pattern
    combobox à grille, ←→ entre l'arrêt et le bouton).
-2. Détail d'un itinéraire en feuille (étapes, quais) et **Suivre** une étape avec le `TripSheet`
-   existant ; choix de l'heure (`date`/`time`/`isArrivalTime` de la source) ; « Plus tard »
-   (`page`) ; itinéraires récents.
+2. Choix de l'heure (`date`/`time`/`isArrivalTime` de la source) ; « Plus tard » (`page`) ;
+   itinéraires récents.
 3. Couleurs officielles du Léman Express, extraites du GTFS comme pour les lignes TPG.
 4. Itinéraires favoris dans l'onglet Favoris (« Maison → Travail » avec le prochain départ).
 5. Carte dans le détail, chargée à la demande.
@@ -223,5 +286,8 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 | `lib/useStopShortcuts.ts` | favoris + récents sans doublon |
 | `components/ItineraryScreen.tsx` | écran, états (position, vide, erreurs), URL |
 | `components/RouteFields.tsx` | champs Départ / Arrivée, saisie, inversion |
-| `components/ConnectionCard.tsx` | une carte de résultat |
+| `components/ConnectionCard.tsx` | une carte de résultat (bouton → détail) |
+| `components/ConnectionSheet.tsx` | feuille de détail : frise, arrêts intermédiaires, « Suivre » |
+| `components/TripSheet.tsx` | suivi d'une étape (`onBack`, `alightId`) |
+| `lib/connectionLabels.ts` | durée, changements, « Partir dans… » |
 | `components/StopBoard.tsx` | bouton « Y aller » |
