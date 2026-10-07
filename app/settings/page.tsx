@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 import Card from "@/components/Card";
+import InstallSetting from "@/components/InstallSetting";
 import Screen from "@/components/Screen";
+import Section from "@/components/SettingsSection";
 import SuggestionForm from "@/components/SuggestionForm";
 import ThemePicker from "@/components/ThemePicker";
 import pkg from "@/package.json";
@@ -21,6 +23,8 @@ export default function SettingsPage() {
           <p className="mt-2.5 px-1 text-[13px] text-muted">« Auto » suit le réglage clair/sombre de l’appareil.</p>
         </Card>
       </Section>
+
+      <InstallSetting />
 
       <Section id="settings-suggestions" title="Suggestions">
         <SuggestionForm />
@@ -65,17 +69,6 @@ export default function SettingsPage() {
         </Card>
       </Section>
     </Screen>
-  );
-}
-
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return (
-    <section aria-labelledby={id} className="mb-8">
-      <h2 id={id} className="mb-2 px-4 text-[13px] font-medium tracking-wide text-muted uppercase">
-        {title}
-      </h2>
-      {children}
-    </section>
   );
 }
 

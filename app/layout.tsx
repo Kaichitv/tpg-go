@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import InstallToast from "@/components/InstallToast";
 import TabBar from "@/components/TabBar";
+import { installInitScript } from "@/lib/installInit";
 import { THEME_COLORS, themeInitScript } from "@/lib/themeInit";
 import SwRegister from "./sw-register";
 import ThemeSync from "./theme-sync";
@@ -31,10 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr-CH" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: installInitScript }} />
       </head>
       <body>
         {children}
         <TabBar />
+        <InstallToast />
         <ThemeSync />
         <SwRegister />
       </body>
