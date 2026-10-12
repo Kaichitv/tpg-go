@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { ArrowClockwiseIcon, NavigationArrowIcon, WarningIcon } from "@phosphor-icons/react/ssr";
 import type { NearbyStop } from "@/lib/types";
 import type { NearbyStops } from "@/lib/useNearbyStops";
@@ -45,7 +46,15 @@ export default function NearbySection({ nearby }: { nearby: NearbyStops }) {
         </>
       ) : geo.status === "idle" ? (
         <Prompt
-          text="Ta position sert uniquement à trouver les arrêts les plus proches."
+          text={
+            <>
+              Ta position sert uniquement à trouver les arrêts les plus proches, directement sur ton appareil : elle
+              n’est jamais envoyée.{" "}
+              <Link href="/privacy#position" className="font-medium text-accent-ink underline underline-offset-2">
+                En savoir plus
+              </Link>
+            </>
+          }
           action={
             <button type="button" onClick={locate} className={primaryButton}>
               <NavigationArrowIcon size={18} weight="fill" aria-hidden />
@@ -107,7 +116,7 @@ function StopList({ stops }: { stops: NearbyStop[] }) {
   );
 }
 
-function Prompt({ title, text, action }: { title?: string; text: string; action: ReactNode }) {
+function Prompt({ title, text, action }: { title?: string; text: ReactNode; action: ReactNode }) {
   return (
     <Card className="flex flex-col items-center gap-3 px-6 py-6 text-center">
       <span className="inline-flex size-12 items-center justify-center rounded-full bg-accent/15 text-accent-ink">

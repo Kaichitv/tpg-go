@@ -31,6 +31,7 @@ PWA des passages TPG en temps réel. Next.js 15 (App Router) + TypeScript, PWA i
 - **Itinéraires** : `/v1/connections` de opendata.ch, **toujours avec des ids DIDOK** (un nom comme « Bel-Air » est résolu ailleurs en Suisse). La source n'accepte pas de coordonnées : le départ depuis une position passe par les arrêts TPG proches et une marche **estimée**, calculés sur l'appareil (`lib/walk.ts`) puis appariés côté serveur (`lib/itinerary.ts`), toujours signalée comme estimation dans l'UI. Doc : `docs/itinerary.md`.
 - **Suivi de trajet** : séquence via le champ `passList` de opendata.ch. La progression est **déduite des horaires**, ce n'est pas une position GPS (le préciser dans l'UI). La vraie position viendra du GTFS-RT officiel en v2.
 - Aucun secret commité ; clés en variables d'env + `.env.example`.
+- **Confidentialité** : `app/privacy/page.tsx` décrit chaque donnée traitée. La mettre à jour, avec sa date, dès qu'un traitement change (nouvelle donnée, sous-traitant, durée de conservation, région Vercel).
 
 ## Conventions de code
 - Petits commits logiques.

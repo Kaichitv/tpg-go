@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import {
   ClockCounterClockwiseIcon,
   NavigationArrowIcon,
@@ -307,7 +308,15 @@ function GeoPrompt({ geo, onLocate, onChooseStop }: { geo: GeoState; onLocate: (
       return (
         <Prompt
           icon={icon}
-          text="Ta position sert uniquement à trouver les arrêts proches de toi et à estimer la marche."
+          text={
+            <>
+              Ta position sert uniquement à trouver les arrêts proches de toi et à estimer la marche, sur ton appareil :
+              tes coordonnées ne sont jamais envoyées.{" "}
+              <Link href="/privacy#position" className="font-medium text-accent-ink underline underline-offset-2">
+                En savoir plus
+              </Link>
+            </>
+          }
           action={
             <>
               <button type="button" onClick={onLocate} className={primaryButton}>
@@ -356,7 +365,7 @@ function GeoPrompt({ geo, onLocate, onChooseStop }: { geo: GeoState; onLocate: (
   }
 }
 
-function Prompt({ icon, title, text, action }: { icon: ReactNode; title?: string; text: string; action: ReactNode }) {
+function Prompt({ icon, title, text, action }: { icon: ReactNode; title?: string; text: ReactNode; action: ReactNode }) {
   return (
     <Card className="flex flex-col items-center gap-3 px-6 py-6 text-center">
       <span className="inline-flex size-12 items-center justify-center rounded-full bg-accent/15 text-accent-ink">

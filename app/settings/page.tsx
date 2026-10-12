@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
+import Link from "next/link";
+import { ArrowSquareOutIcon, CaretRightIcon } from "@phosphor-icons/react/ssr";
 import Card from "@/components/Card";
 import InstallSetting from "@/components/InstallSetting";
 import Screen from "@/components/Screen";
@@ -28,6 +29,22 @@ export default function SettingsPage() {
 
       <Section id="settings-suggestions" title="Suggestions">
         <SuggestionForm />
+      </Section>
+
+      <Section id="settings-privacy" title="Confidentialité">
+        <Card
+          as={Link}
+          href="/privacy"
+          className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 hover:bg-surface-hover"
+        >
+          <span className="min-w-0">
+            <span className="block text-[16px]">Politique de confidentialité</span>
+            <span className="block text-[13px] text-muted">
+              Tes coordonnées ne quittent jamais ton appareil. Ni compte, ni cookies, ni traceurs.
+            </span>
+          </span>
+          <CaretRightIcon size={16} weight="bold" aria-hidden className="shrink-0 text-muted" />
+        </Card>
       </Section>
 
       <Section id="settings-about" title="À propos">

@@ -29,7 +29,10 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
   signalée comme telle ; seuls les arrêts proches et les minutes de marche partent vers le
   serveur, jamais les coordonnées. Détails : [docs/itinerary.md](docs/itinerary.md).
 - **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
-  (nom + texte, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), version et sources.
+  (nom + texte, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), politique de
+  confidentialité, version et sources.
+- **Confidentialité** (`/privacy`, LPD suisse et RGPD) : coordonnées jamais envoyées, ni compte,
+  ni cookies, ni traceurs. Liée depuis les Réglages et les invites « Utiliser ma position ».
 
 - **Recherche d'arrêt** : autocomplétion (debounce 250 ms, clavier ↑ ↓ Entrée Échap, tactile),
   limitée au **réseau TPG** (y compris les arrêts en France), insensible aux accents et à la
@@ -52,7 +55,8 @@ app/
   page.tsx                  onglet Favoris (accueil)
   search/page.tsx           onglet Recherche (recherche, récents, à proximité)
   itinerary/page.tsx        onglet Itinéraire (?from=&to=, id d'arrêt ou « here »)
-  settings/page.tsx         onglet Réglages (thème, suggestions, à propos)
+  settings/page.tsx         onglet Réglages (thème, suggestions, confidentialité, à propos)
+  privacy/page.tsx          politique de confidentialité (poussée dans l'onglet d'origine)
   stop/[id]/page.tsx        tableau des passages d'un arrêt (poussé dans l'onglet d'origine)
   api/departures/route.ts   prochains passages (?stop=<id|nom>&limit=)
   api/locations/route.ts    recherche d'arrêts (?q=)
