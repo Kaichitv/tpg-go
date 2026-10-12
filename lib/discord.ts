@@ -31,7 +31,8 @@ export async function postSuggestion(s: Suggestion): Promise<void> {
         {
           title: "Nouvelle suggestion",
           color: ACCENT,
-          author: { name: s.name },
+          // Nom facultatif : sans nom, pas d'auteur (Discord refuse un auteur vide).
+          ...(s.name ? { author: { name: s.name } } : {}),
           description: s.message,
           footer: { text: `TPG Go v${pkg.version}` },
           timestamp: new Date().toISOString(),

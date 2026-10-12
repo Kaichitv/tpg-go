@@ -8,12 +8,17 @@ export const dynamic = "force-dynamic";
 
 // Anti-abus « best effort » : mémoire de l'instance serverless, remise à zéro à chaque
 // démarrage à froid. Suffisant pour freiner un envoi en rafale, pas un attaquant déterminé.
+// Les adresses IP ne sont jamais écrites ailleurs, et oubliées après la fenêtre (cf. /privacy).
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_PER_WINDOW = 5;
 const hits = new Map<string, number[]>();
 
 function rateLimited(ip: string): boolean {
   const now = Date.now();
+  // Envois horodatés dans l'ordre : le dernier dit si l'adresse est encore dans la fenêtre.
+  for (const [k, times] of hits) {
+    if (now - times[times.length - 1] >= WINDOW_MS) hits.delete(k);
+  }
   const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
   if (recent.length >= MAX_PER_WINDOW) {
     hits.set(ip, recent);

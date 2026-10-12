@@ -29,10 +29,11 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
   signalée comme telle ; seuls les arrêts proches et les minutes de marche partent vers le
   serveur, jamais les coordonnées. Détails : [docs/itinerary.md](docs/itinerary.md).
 - **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
-  (nom + texte, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), politique de
+  (texte + nom facultatif, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), politique de
   confidentialité, version et sources.
 - **Confidentialité** (`/privacy`, LPD suisse et RGPD) : coordonnées jamais envoyées, ni compte,
-  ni cookies, ni traceurs. Liée depuis les Réglages et les invites « Utiliser ma position ».
+  ni cookies, ni traceurs. Liée depuis les Réglages, les invites « Utiliser ma position » et le
+  formulaire de suggestions.
 
 - **Recherche d'arrêt** : autocomplétion (debounce 250 ms, clavier ↑ ↓ Entrée Échap, tactile),
   limitée au **réseau TPG** (y compris les arrêts en France), insensible aux accents et à la
@@ -62,7 +63,7 @@ app/
   api/locations/route.ts    recherche d'arrêts (?q=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
   api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « here » + near=&walk=)
-  api/suggestions/route.ts  POST d'une suggestion { name, message } → webhook Discord
+  api/suggestions/route.ts  POST d'une suggestion { name?, message } → webhook Discord
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
                             FavStar, TripSheet, FavoriteCard, StatusLine, ItineraryScreen,
@@ -185,7 +186,8 @@ npm run test:api "Bel-Air"
 - Itinéraires : départ immédiat uniquement, marche estimée à vol d'oiseau, lignes non TPG (Léman
   Express, CFF) en badge neutre faute de couleurs officielles (voir [docs/itinerary.md](docs/itinerary.md)).
 - Anti-abus des suggestions « best effort » (pot de miel, même origine, 5 envois / 10 min par IP
-  en mémoire de l'instance serverless, remis à zéro au démarrage à froid).
+  en mémoire de l'instance serverless, remis à zéro au démarrage à froid ; une IP est oubliée dès
+  que sa fenêtre de 10 min est écoulée).
 
 ## Déployer sur Vercel
 

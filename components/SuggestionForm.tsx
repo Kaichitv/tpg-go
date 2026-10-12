@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { CheckCircleIcon, CircleNotchIcon, PaperPlaneTiltIcon } from "@phosphor-icons/react/ssr";
 import { ApiError, sendSuggestion } from "@/lib/api";
 import { MESSAGE_MAX, NAME_MAX, parseSuggestion } from "@/lib/suggestion";
@@ -40,7 +41,7 @@ export default function SuggestionForm() {
     const parsed = parseSuggestion({ name, message });
     if (typeof parsed === "string") {
       setError(parsed);
-      setInvalid(name.trim() ? "message" : "name");
+      setInvalid(name.trim().length > NAME_MAX ? "name" : "message");
       return;
     }
     setError(null);
@@ -66,7 +67,7 @@ export default function SuggestionForm() {
     return (
       <Card className="flex flex-col items-center gap-2 px-4 py-6 text-center" role="status">
         <CheckCircleIcon size={40} weight="fill" aria-hidden className="text-ontime" />
-        <p className="text-[17px] font-semibold">Merci {name.trim()} !</p>
+        <p className="text-[17px] font-semibold">{name.trim() ? `Merci ${name.trim()} !` : "Merci !"}</p>
         <p className="text-[15px] text-muted">Ta suggestion a bien été envoyée.</p>
         <button type="button" onClick={again} className="mt-2 min-h-11 rounded-full px-4 text-[15px] font-medium text-accent-ink hover:bg-surface-hover">
           Envoyer une autre suggestion
@@ -81,12 +82,15 @@ export default function SuggestionForm() {
   return (
     <Card as="form" noValidate onSubmit={onSubmit} aria-describedby={`${id}-hint`} className="flex flex-col gap-4 p-4">
       <p id={`${id}-hint`} className="text-[15px] text-muted">
-        Une idée, un bug, un manque ? Ton message est transmis directement au développeur, rien n’est publié.
+        Une idée, un bug, un manque ? Ton message est transmis au développeur sur Discord, rien n’est publié.{" "}
+        <Link href="/privacy#suggestions" className="font-medium text-accent-ink underline underline-offset-2">
+          En savoir plus
+        </Link>
       </p>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${id}-name`} className="px-1 text-[13px] font-medium text-muted">
-          Nom
+          Nom ou pseudo <span className="font-normal">(facultatif)</span>
         </label>
         <input
           id={`${id}-name`}
@@ -94,7 +98,7 @@ export default function SuggestionForm() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={NAME_MAX}
-          autoComplete="given-name"
+          autoComplete="nickname"
           enterKeyHint="next"
           placeholder="Ton prénom ou pseudo"
           aria-invalid={invalid === "name"}

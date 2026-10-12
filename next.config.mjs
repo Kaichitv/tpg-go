@@ -7,6 +7,15 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Défense en profondeur : seule l'app elle-même (jamais un contenu intégré)
+        // peut demander la position ; caméra et micro ne servent pas.
+        source: "/:path*",
+        headers: [
+          { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=()" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
         // Le service worker doit pouvoir contrôler toute l'app
         source: "/sw.js",
         headers: [
