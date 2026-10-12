@@ -1,6 +1,6 @@
 // lib/progress.ts
 // Progression d'une course DÉDUITE DES HORAIRES (temps réel si fourni, sinon
-// théorique). Ce n'est PAS une position GPS : la source v1 n'en fournit pas.
+// théorique). Ce n'est PAS une position GPS : aucune source publique n'en fournit pour les TPG.
 
 import { effectiveTime, type TripStop } from "./types";
 

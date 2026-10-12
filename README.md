@@ -88,6 +88,7 @@ lib/
   lineColors.fallback.json  snapshot committé, généré par scripts/build-line-colors.mjs
 public/sw.js                service worker (jamais de cache /api/*)
 docs/itinerary.md           documentation de la fonctionnalité Itinéraire
+docs/v2-ojp.md              v2 : test de la source officielle OJP 2.0 (pourquoi, quoi vérifier)
 scripts/                    build-line-colors.mjs, build-tpg-stops.mjs, build-icons.mjs, test-api.mjs
                             lib/gtfs.mjs (lecture partagée du GTFS : Range, zip, CSV, flux)
 assets/tpg-go-icon.png      image maître des icônes (non servie)
@@ -98,6 +99,14 @@ data/line-colors.overrides.json   couleurs saisies à la main (voir plus bas)
   pour les passages), API tierce protégée. La recherche d'arrêts et la proximité n'appellent
   pas la source : elles lisent l'index TPG local.
 - **Migration OJP** : réécrire `lib/transport.ts` (mêmes fonctions, mêmes types). L'UI ne change pas.
+
+## v2 : OJP 2.0 à tester
+
+Pour la v2, on testera l'API officielle **OJP 2.0** de opentransportdata.swiss comme source live,
+à la place de transport.opendata.ch. On en attend des heures estimées plus fines que la minute, les
+courses supprimées et les perturbations. Le GTFS-RT a été écarté : il ne fournit pas la position
+des véhicules et demanderait notre propre moteur d'horaires. Rien n'est migré tant que le test
+n'est pas concluant. Pourquoi, ce qu'on vérifie et les contraintes : [docs/v2-ojp.md](docs/v2-ojp.md).
 
 ## Couleurs des lignes (GTFS officiel)
 
@@ -182,7 +191,10 @@ npm run test:api "Bel-Air"
   répétées sont ralenties (doc consultée en oct. 2026), d'où le cache serveur. Un itinéraire depuis
   une position coûte jusqu'à 3 appels.
 - Temps réel non garanti pour l'urbain ; affiché « théorique » quand absent.
-- Pas de position GPS des véhicules en v1 (GTFS-RT officiel prévu en v2).
+- Temps réel arrondi à la minute, sans signalement des courses supprimées (OJP 2.0 à tester en
+  v2, voir [docs/v2-ojp.md](docs/v2-ojp.md)).
+- Pas de position GPS des véhicules : aucune source publique ne la fournit pour les TPG, le
+  GTFS-RT suisse compris.
 - Itinéraires : départ immédiat uniquement, marche estimée à vol d'oiseau, lignes non TPG (Léman
   Express, CFF) en badge neutre faute de couleurs officielles (voir [docs/itinerary.md](docs/itinerary.md)).
 - Anti-abus des suggestions « best effort » (pot de miel, même origine, 5 envois / 10 min par IP

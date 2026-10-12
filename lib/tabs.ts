@@ -6,6 +6,7 @@
 // sert de cible au bouton retour.
 
 import { useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 
 export type TabId = "favorites" | "search" | "itinerary" | "settings";
 
@@ -21,6 +22,12 @@ export const TABS: readonly Tab[] = [
 
 const DEFAULT_TAB: TabId = "favorites";
 
+/**
+ * Onglet de rattachement d'une page de détail, quand on ne sait pas d'où l'on
+ * vient (lien direct, rechargement) : la confidentialité appartient aux Réglages.
+ */
+const HOME_TABS: Readonly<Record<string, TabId>> = { "/privacy": "settings" };
+
 /** Onglet dont `pathname` est la racine, ou null (page de détail). */
 export function tabAt(pathname: string): Tab | null {
   return TABS.find((t) => t.href === pathname) ?? null;
@@ -31,8 +38,8 @@ export function getTab(id: TabId): Tab {
 }
 
 // Dernier onglet racine visité, en mémoire : la tabbar vit dans le layout racine
-// et n'est pas démontée entre les navigations.
-let origin: TabId = DEFAULT_TAB;
+// et n'est pas démontée entre les navigations. Null tant qu'aucun n'a été visité.
+let origin: TabId | null = null;
 const listeners = new Set<() => void>();
 
 export function setOriginTab(id: TabId) {
@@ -48,12 +55,16 @@ function subscribe(listener: () => void) {
   };
 }
 
-/** Onglet d'où l'on vient (Favoris par défaut, p. ex. sur un lien direct vers un arrêt). */
+/**
+ * Onglet d'où l'on vient. Sans onglet visité (lien direct, rechargement) :
+ * l'onglet de rattachement de la page, sinon Favoris (p. ex. pour un arrêt).
+ */
 export function useOriginTab(): Tab {
+  const pathname = usePathname();
   const id = useSyncExternalStore(
     subscribe,
     () => origin,
-    () => DEFAULT_TAB,
+    () => null,
   );
-  return getTab(id);
+  return getTab(id ?? HOME_TABS[pathname] ?? DEFAULT_TAB);
 }
