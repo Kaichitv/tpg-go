@@ -1,22 +1,17 @@
 // lib/itinerary.ts
 // Itinéraires entre deux extrémités, côté serveur uniquement. Une extrémité est
-// un arrêt TPG ou une position. La source n'accepte pas de coordonnées (aucun
+// un arrêt TPG ou ma position. La source n'accepte pas de coordonnées (aucun
 // résultat) et résout mal les adresses (« Rue du Rhône 8 » → un arrêt à ~1 km
-// alors que Bel-Air est à 155 m) : pour une position, on interroge donc les
-// arrêts TPG les plus proches (index local) et on ajoute la marche, ESTIMÉE à
-// vol d'oiseau. Indépendant de la source : ne passe que par lib/transport.ts.
+// alors que Bel-Air est à 155 m) : pour ma position, on interroge donc les
+// arrêts TPG les plus proches et on ajoute la marche, ESTIMÉE à vol d'oiseau.
+// Arrêts et marche sont calculés sur l'appareil (lib/walk.ts) : le serveur ne
+// reçoit jamais de coordonnées. Indépendant de la source : ne passe que par
+// lib/transport.ts.
 
-import { distanceM, getTpgStop, nearestTpgStops } from "./stopIndex";
+import { getTpgStop } from "./stopIndex";
 import { getConnections, NotFoundError } from "./transport";
 import type { Connection, Endpoint, Stop, TimePoint, WalkLeg } from "./types";
 
-/** Arrêts candidats autour d'une position. */
-const CANDIDATES = 3;
-/** Au-delà, un arrêt n'est retenu que s'il n'y en a pas de plus proche. */
-const MAX_WALK_M = 800;
-/** Marche à ~4,8 km/h, avec un détour moyen de 30 % par rapport au vol d'oiseau. */
-const WALK_M_PER_MIN = 80;
-const DETOUR = 1.3;
 /** Itinéraires demandés par paire d'arrêts quand une extrémité est une position. */
 const PER_PAIR = 4;
 const MAX_RESULTS = 6;
@@ -24,7 +19,7 @@ const MAX_RESULTS = 6;
 const DEPARTED_GRACE_MS = 30_000;
 
 /** Arrêt de montée (ou de descente) avec la marche depuis (ou vers) la position. */
-type Place = { stop: Stop; walkMin: number; distanceM: number | null };
+type Place = { stop: Stop; walkMin: number };
 
 /**
  * Itinéraires de `from` à `to`, du prochain départ au plus tardif. Au plus une
@@ -66,20 +61,17 @@ function places(e: Endpoint): Place[] {
   if (e.kind === "stop") {
     const stop = getTpgStop(e.stopId);
     if (!stop) throw new NotFoundError(`Arrêt inconnu du réseau TPG : ${e.stopId}`);
-    return [{ stop, walkMin: 0, distanceM: null }];
+    return [{ stop, walkMin: 0 }];
   }
-  const near = nearestTpgStops(e.lat, e.lon, CANDIDATES);
-  if (!near.length) throw new NotFoundError("Aucun arrêt TPG à moins de 2 km de ta position");
-  const close = near.filter((s) => s.distanceM !== null && s.distanceM <= MAX_WALK_M);
-  return (close.length ? close : near.slice(0, 1)).map(({ distanceM, ...stop }) => ({
-    stop,
-    walkMin: walkMinutes(distanceM ?? 0),
-    distanceM,
-  }));
-}
-
-function walkMinutes(m: number): number {
-  return Math.max(1, Math.ceil((m * DETOUR) / WALK_M_PER_MIN));
+  // Un id inconnu (index de l'appareil d'une version précédente) est ignoré.
+  const near = e.near.flatMap(({ stopId, walkMin }) => {
+    const stop = getTpgStop(stopId);
+    return stop ? [{ stop, walkMin }] : [];
+  });
+  if (!near.length) {
+    throw new NotFoundError(`Arrêts inconnus du réseau TPG : ${e.near.map((s) => s.stopId).join(", ")}`);
+  }
+  return near;
 }
 
 /** Ajoute la marche estimée entre la position et l'arrêt de montée / de descente. */
@@ -113,11 +105,9 @@ function walkOnly(from: Endpoint, to: Endpoint, now: number): Connection | null 
   const position = from.kind === "position" ? from : to.kind === "position" ? to : null;
   const other = from.kind === "stop" ? from : to.kind === "stop" ? to : null;
   const stop = other && getTpgStop(other.stopId);
-  if (!position || !stop || stop.lat === null || stop.lon === null) return null;
+  const min = position?.directWalkMin;
+  if (!min || !stop) return null;
 
-  const m = distanceM(position.lat, position.lon, stop.lat, stop.lon);
-  if (m > MAX_WALK_M) return null;
-  const min = walkMinutes(m);
   const start = new Date(now).toISOString();
   const end = new Date(now + min * 60_000).toISOString();
   const leg =

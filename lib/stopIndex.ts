@@ -1,5 +1,7 @@
 // lib/stopIndex.ts
-// Index des arrêts du réseau TPG, côté serveur uniquement (82 Ko de JSON).
+// Index des arrêts du réseau TPG (82 Ko de JSON, ~13 Ko compressés). Partagé
+// client/serveur : « À proximité » et les itinéraires depuis ma position sont
+// calculés sur l'appareil, pour que la position n'en sorte jamais.
 // Source : snapshot lib/tpgStops.json, extrait du GTFS officiel par
 // scripts/build-tpg-stops.mjs (`npm run build:stops`, à relancer à chaque
 // changement d'horaire annuel). Les identifiants sont ceux qu'attend la
@@ -9,7 +11,7 @@ import type { NearbyStop, Stop, StopKind } from "./types";
 import data from "./tpgStops.json";
 
 /** Rayon au-delà duquel un arrêt n'est plus « à proximité ». */
-const NEARBY_RADIUS_M = 2000;
+export const NEARBY_RADIUS_M = 2000;
 
 const KINDS: readonly StopKind[] = ["tram", "bus", "train", "boat", "other"];
 

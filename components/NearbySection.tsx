@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ArrowClockwiseIcon, NavigationArrowIcon, WarningIcon } from "@phosphor-icons/react/ssr";
+import type { NearbyStop } from "@/lib/types";
 import type { NearbyStops } from "@/lib/useNearbyStops";
 import BoardSkeleton from "./BoardSkeleton";
 import Card from "./Card";
@@ -40,7 +41,7 @@ export default function NearbySection({ nearby }: { nearby: NearbyStops }) {
             Distances à vol d’oiseau depuis ta position (précision ±&nbsp;{formatDistance(position.accuracyM)}).
           </p>
           {geo.status === "failed" && <Notice>Position non actualisée : résultats de ta position précédente.</Notice>}
-          <StopList nearby={nearby} />
+          <StopList stops={nearby.stops} />
         </>
       ) : geo.status === "idle" ? (
         <Prompt
@@ -84,42 +85,25 @@ export default function NearbySection({ nearby }: { nearby: NearbyStops }) {
   );
 }
 
-function StopList({ nearby }: { nearby: NearbyStops }) {
-  const { status, stops } = nearby.results;
-
+/** Liste calculée sur l'appareil (index local) : ni chargement ni erreur réseau. */
+function StopList({ stops }: { stops: NearbyStop[] }) {
   if (!stops.length) {
-    if (status === "loading") {
-      return (
-        <Card className="overflow-hidden" aria-busy>
-          <BoardSkeleton rows={3} />
-        </Card>
-      );
-    }
-    return (
-      <p className={`px-1 text-[15px] ${status === "error" ? "text-late" : "text-muted"}`}>
-        {status === "error"
-          ? "Impossible de récupérer les arrêts proches. Réessaie dans un instant."
-          : "Aucun arrêt TPG à moins de 2 km de ta position."}
-      </p>
-    );
+    return <p className="px-1 text-[15px] text-muted">Aucun arrêt TPG à moins de 2 km de ta position.</p>;
   }
 
   return (
-    <>
-      {status === "error" && <Notice>Liste non actualisée : erreur de chargement.</Notice>}
-      <ul className="flex flex-col gap-4" aria-busy={status === "loading"}>
-        {stops.map((s) => (
-          <li key={s.id}>
-            <StopCard
-              id={s.id}
-              name={s.name}
-              headingLevel={3}
-              detail={s.distanceM !== null ? formatDistance(s.distanceM) : undefined}
-            />
-          </li>
-        ))}
-      </ul>
-    </>
+    <ul className="flex flex-col gap-4">
+      {stops.map((s) => (
+        <li key={s.id}>
+          <StopCard
+            id={s.id}
+            name={s.name}
+            headingLevel={3}
+            detail={s.distanceM !== null ? formatDistance(s.distanceM) : undefined}
+          />
+        </li>
+      ))}
+    </ul>
   );
 }
 

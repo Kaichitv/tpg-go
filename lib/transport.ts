@@ -3,17 +3,16 @@
 // Source v1 : API communautaire transport.opendata.ch (sans clé).
 // C'est le SEUL fichier qui connaît la source : pour passer à l'OJP officiel
 // (opentransportdata.swiss), on réécrit ce module sans toucher aux types ni à l'UI.
-// Les arrêts (recherche, proximité) viennent de l'index TPG local (lib/stopIndex.ts) :
-// la recherche de la source couvre toute la Suisse et plafonne à 10 résultats.
+// La recherche d'arrêts vient de l'index TPG local (lib/stopIndex.ts) : celle de la
+// source couvre toute la Suisse et plafonne à 10 résultats.
 
-import { nearestTpgStops, searchTpgStops } from "./stopIndex";
+import { searchTpgStops } from "./stopIndex";
 import type {
   Board,
   Connection,
   Departure,
   Leg,
   LegStop,
-  NearbyStop,
   RideLeg,
   Stop,
   StopKind,
@@ -97,11 +96,6 @@ type RawConnections = { connections?: RawConnection[] | null };
 /** Arrêts du réseau TPG dont le nom correspond à la saisie. */
 export async function searchStops(query: string): Promise<Stop[]> {
   return searchTpgStops(query, 20);
-}
-
-/** Arrêts TPG les plus proches d'une position (WGS84), du plus proche au plus loin. */
-export async function nearbyStops(lat: number, lon: number): Promise<NearbyStop[]> {
-  return nearestTpgStops(lat, lon, 10);
 }
 
 export type DeparturesOptions = {

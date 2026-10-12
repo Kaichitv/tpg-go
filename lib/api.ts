@@ -3,7 +3,7 @@
 // les types de lib/types.ts — jamais la source tierce.
 
 import type { Suggestion } from "./suggestion";
-import type { Board, ConnectionsResult, Endpoint, NearbyStop, Stop, Trip, TripQuery } from "./types";
+import type { Board, ConnectionsResult, Endpoint, Stop, Trip, TripQuery } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -36,25 +36,24 @@ export async function fetchStops(q: string, signal?: AbortSignal): Promise<Stop[
   return data.stops;
 }
 
-export async function fetchNearby(lat: number, lon: number, signal?: AbortSignal): Promise<NearbyStop[]> {
-  const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
-  const data = await getJson<{ stops: NearbyStop[] }>(`/api/nearby?${params}`, signal);
-  return data.stops;
-}
-
 export function fetchTrip(q: TripQuery, signal?: AbortSignal): Promise<Trip> {
   const params = new URLSearchParams({ journey: q.journey, line: q.line, stop: q.stopId, at: q.at });
   return getJson<Trip>(`/api/trip?${params}`, signal);
 }
 
+/** Ma position part réduite aux arrêts proches et à la marche (`near`, `walk`), jamais en coordonnées. */
 export function fetchConnections(from: Endpoint, to: Endpoint, signal?: AbortSignal): Promise<ConnectionsResult> {
   const params = new URLSearchParams({ from: endpointParam(from), to: endpointParam(to) });
+  const position = from.kind === "position" ? from : to.kind === "position" ? to : null;
+  if (position) {
+    params.set("near", position.near.map((s) => `${s.stopId}:${s.walkMin}`).join(","));
+    if (position.directWalkMin !== null) params.set("walk", String(position.directWalkMin));
+  }
   return getJson<ConnectionsResult>(`/api/connections?${params}`, signal);
 }
 
-/** Arrêt → id ; position → « lat,lon » arrondis à ~10 m (suffisant pour estimer la marche). */
 function endpointParam(e: Endpoint): string {
-  return e.kind === "stop" ? e.stopId : `${e.lat.toFixed(4)},${e.lon.toFixed(4)}`;
+  return e.kind === "stop" ? e.stopId : "here";
 }
 
 /** `website` : pot de miel anti-robots, laissé vide par un humain. */

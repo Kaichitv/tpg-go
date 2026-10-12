@@ -112,7 +112,11 @@ correspond pas au numéro du tableau, et la correspondance n'est pas garantie.
 La permission n'est demandée qu'au geste (« Utiliser ma position »), sauf si elle est déjà
 accordée (HIG, comme « À proximité »). Refusée, indisponible ou introuvable : message
 explicatif et bouton « Choisir un arrêt à la place ». Si une relocalisation échoue, on garde la
-dernière position connue et on le signale.
+dernière position connue et on le signale. Aucun arrêt TPG à moins de 2 km : message
+« Aucun arrêt à proximité », avec « Réessayer » et « Choisir un arrêt à la place ».
+
+La position **ne quitte jamais l'appareil** : elle y est réduite aux arrêts proches et aux
+minutes de marche (`lib/walk.ts`), seules données envoyées au serveur (voir API).
 
 ## URL
 
@@ -130,11 +134,18 @@ Les noms sont résolus côté serveur (`app/itinerary/page.tsx`) dans l'index lo
 
 ## API
 
-### `GET /api/connections?from=&to=`
+### `GET /api/connections?from=&to=[&near=&walk=]`
 
-Chaque extrémité est un **id d'arrêt TPG** (`8587387`) ou une **position** `lat,lon`
-(`46.2044,6.145`, WGS84, arrondie à 4 décimales par le client, soit ~10 m). Au plus une
-position.
+Chaque extrémité est un **id d'arrêt TPG** (`8587387`) ou **`here`** (ma position, au plus une
+extrémité). La position elle-même n'est **jamais envoyée** : l'appareil la réduit
+(`lib/walk.ts`) à :
+
+- `near=<id>:<min>,…` : les arrêts candidats (3 au plus) et la marche estimée jusqu'à chacun ;
+- `walk=<min>` (facultatif) : la marche directe jusqu'à l'autre extrémité, quand elle est à
+  moins de 800 m (option « à pied »).
+
+Exemple : `?from=here&to=8592935&near=8592862:3,8587387:4,8592794:4`. Les minutes sont bornées
+(1 à 33 pour `near`, 1 à 13 pour `walk`), tout autre format est refusé (400).
 
 Réponse (`ConnectionsResult`, `lib/types.ts`) :
 
@@ -159,12 +170,12 @@ WalkLeg = { kind: "walk", from: Stop | null, to: Stop | null,   // null = ma pos
 
 | Statut | Cas |
 | --- | --- |
-| 400 `bad_request` | paramètre absent ou mal formé, deux positions, départ = arrivée |
-| 404 `not_found` | id hors réseau TPG, aucun arrêt TPG à moins de 2 km de la position |
+| 400 `bad_request` | paramètre absent ou mal formé (dont l'ancien `lat,lon`), deux positions, départ = arrivée |
+| 404 `not_found` | id hors réseau TPG, ou aucun des arrêts `near` connu (index d'une version précédente) |
 | 502 `upstream` | source injoignable ou en erreur |
 
-Cache : `Cache-Control: max-age=15`, `private` dès qu'une position est présente (la réponse
-révèle une position), `public` sinon. Côté serveur, chaque appel à la source est mis en cache
+Cache : `Cache-Control: max-age=15`, `private` dès que ma position est une extrémité (les
+arrêts proches la révèlent à peu près), `public` sinon. Côté serveur, chaque appel à la source est mis en cache
 30 s (cache mémoire à TTL strict de `lib/transport.ts`). Le service worker ne met jamais
 `/api/*` en cache.
 
@@ -192,9 +203,13 @@ Mapping vers le domaine :
   l'arrêt TPG « Genève, gare Cornavin ». Le renommage est fait dans `lib/transport.ts`
   (`RENAMED`) et vaut aussi pour les directions et les tableaux de passages.
 
-## Départ depuis ma position (`lib/itinerary.ts`)
+## Départ depuis ma position (`lib/walk.ts`, `lib/itinerary.ts`)
 
-La source n'acceptant ni coordonnées ni adresses fiables, le serveur procède ainsi :
+La source n'acceptant ni coordonnées ni adresses fiables, on procède ainsi. Les étapes 1, 3
+(minutes de marche) et 4 (distance de l'option « à pied ») sont calculées **sur l'appareil**,
+dans l'index local, à pleine précision (`lib/walk.ts`) ; le serveur (`lib/itinerary.ts`) ne
+reçoit que les arrêts et les minutes. Aucun arrêt à moins de 2 km : l'appareil le signale sans
+interroger le serveur.
 
 1. Arrêts candidats : les 3 arrêts TPG les plus proches (index local) à moins de 800 m ;
    à défaut, le plus proche à moins de 2 km.
@@ -215,13 +230,13 @@ La source n'acceptant ni coordonnées ni adresses fiables, le serveur procède a
 Même logique, en miroir, quand l'arrivée est ma position. Si une partie des requêtes échoue,
 on renvoie celles qui ont abouti ; si toutes échouent, l'erreur remonte.
 
-| Constante | Valeur |
-| --- | --- |
-| `CANDIDATES` | 3 arrêts |
-| `MAX_WALK_M` | 800 m |
-| `DETOUR` | 1,3 |
-| `WALK_M_PER_MIN` | 80 |
-| `PER_PAIR` / `MAX_RESULTS` | 4 / 6 |
+| Constante | Valeur | Fichier |
+| --- | --- | --- |
+| `CANDIDATES` | 3 arrêts | `lib/walk.ts` |
+| `MAX_WALK_M` | 800 m | `lib/walk.ts` |
+| `DETOUR` | 1,3 | `lib/walk.ts` |
+| `WALK_M_PER_MIN` | 80 | `lib/walk.ts` |
+| `PER_PAIR` / `MAX_RESULTS` | 4 / 6 | `lib/itinerary.ts` |
 
 Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrêt à arrêt).
 
@@ -276,10 +291,11 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 | Fichier | Rôle |
 | --- | --- |
 | `app/itinerary/page.tsx` | lit `?from=&to=`, résout les noms dans l'index |
-| `app/api/connections/route.ts` | validation des paramètres, en-têtes de cache |
-| `lib/itinerary.ts` | position → arrêts candidats, marche estimée, tri (serveur) |
+| `app/api/connections/route.ts` | validation des paramètres (`here`, `near`, `walk`), en-têtes de cache |
+| `lib/walk.ts` | ma position → arrêts candidats et marche estimée, sur l'appareil (bornes partagées) |
+| `lib/itinerary.ts` | appariement des arrêts, étapes à pied, tri (serveur) |
 | `lib/transport.ts` | `getConnections` : appel et mapping de la source (serveur) |
-| `lib/stopIndex.ts` | `getTpgStop`, `nearestTpgStops`, `distanceM` (serveur) |
+| `lib/stopIndex.ts` | `getTpgStop`, `nearestTpgStops`, `distanceM` (partagé client/serveur) |
 | `lib/types.ts` | `Endpoint`, `Connection`, `Leg`, `Place`, `ItineraryQuery` |
 | `lib/useConnections.ts` | chargement + actualisation 60 s côté client |
 | `lib/useStopSearch.ts` | autocomplétion partagée avec la recherche |

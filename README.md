@@ -21,12 +21,13 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
   la page d'un arrêt garde son onglet d'origine sélectionné et y revient.
 - **Recherche** : champ vide → arrêts récents (hors favoris) puis arrêts à proximité (distance
   à vol d'oiseau, prochains passages) ; la position n'est demandée qu'au geste, sauf si déjà
-  autorisée.
+  autorisée, et les arrêts proches sont calculés sur l'appareil : elle n'est jamais envoyée.
 - **Itinéraire** : d'un arrêt ou de ma position à un arrêt TPG, prochains itinéraires (lignes,
   marche, changements, compte à rebours, temps réel), détail en feuille (frise des étapes, quais,
   arrêts intermédiaires) et **Suivre** une étape TPG. Favoris et récents comme destinations en un
   toucher ; bouton **Y aller** sur la page d'un arrêt. Marche depuis la position **estimée** et
-  signalée comme telle. Détails : [docs/itinerary.md](docs/itinerary.md).
+  signalée comme telle ; seuls les arrêts proches et les minutes de marche partent vers le
+  serveur, jamais les coordonnées. Détails : [docs/itinerary.md](docs/itinerary.md).
 - **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
   (nom + texte, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), version et sources.
 
@@ -55,9 +56,8 @@ app/
   stop/[id]/page.tsx        tableau des passages d'un arrêt (poussé dans l'onglet d'origine)
   api/departures/route.ts   prochains passages (?stop=<id|nom>&limit=)
   api/locations/route.ts    recherche d'arrêts (?q=)
-  api/nearby/route.ts       arrêts proches (?lat=&lon=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
-  api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « lat,lon »)
+  api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « here » + near=&walk=)
   api/suggestions/route.ts  POST d'une suggestion { name, message } → webhook Discord
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
@@ -66,8 +66,9 @@ components/                 Card, StickyBar, LineBadge, DepartureRow, Departures
 lib/
   types.ts                  modèle de domaine partagé (indépendant de la source)
   transport.ts              SEUL module qui connaît transport.opendata.ch (serveur)
-  stopIndex.ts              recherche / proximité dans les arrêts TPG (serveur)
-  itinerary.ts              itinéraires depuis / vers une position : arrêts proches + marche estimée (serveur)
+  stopIndex.ts              recherche / proximité dans les arrêts TPG (partagé client/serveur)
+  walk.ts                   ma position → arrêts proches + marche estimée, calculés sur l'appareil
+  itinerary.ts              itinéraires depuis / vers ma position : appariement, marche, tri (serveur)
   tpgStops.json             snapshot committé, généré par scripts/build-tpg-stops.mjs
   api.ts                    fetchers client vers /api/*
   suggestion.ts             validation d'une suggestion (partagée client/serveur)

@@ -15,6 +15,7 @@ import type { Connection, Departure, Endpoint, ItineraryQuery, Place, RideLeg } 
 import { useConnections } from "@/lib/useConnections";
 import { useGeolocation, type GeoState } from "@/lib/useGeolocation";
 import { useStopShortcuts } from "@/lib/useStopShortcuts";
+import { positionEndpoint } from "@/lib/walk";
 import BoardSkeleton from "./BoardSkeleton";
 import Card from "./Card";
 import ConnectionCard from "./ConnectionCard";
@@ -65,11 +66,21 @@ export default function ItineraryScreen({ initial }: Props) {
 
   const position =
     geo.status === "ready" ? geo.position : geo.status === "locating" || geo.status === "failed" ? geo.last : null;
-  // Arrondi à ~10 m : une relocalisation quasi identique ne relance pas le calcul.
-  const lat = position ? Math.round(position.lat * 1e4) / 1e4 : null;
-  const lon = position ? Math.round(position.lon * 1e4) / 1e4 : null;
-  const from = useMemo(() => endpoint(query.from, lat, lon), [query.from, lat, lon]);
-  const to = useMemo(() => endpoint(query.to, lat, lon), [query.to, lat, lon]);
+  const lat = position?.lat ?? null;
+  const lon = position?.lon ?? null;
+  // Ma position est réduite ici, sur l'appareil, aux arrêts proches et à la marche
+  // (lib/walk.ts) : seuls des ids d'arrêts et des minutes partent vers le serveur.
+  // Extrémités comparées par valeur : une relocalisation qui ne change ni les
+  // arrêts ni la marche ne relance pas le calcul.
+  const [fromKey, toKey] = useMemo(() => {
+    const here = lat !== null && lon !== null ? { lat, lon } : null;
+    return [
+      JSON.stringify(endpoint(query.from, query.to, here)),
+      JSON.stringify(endpoint(query.to, query.from, here)),
+    ] as const;
+  }, [query.from, query.to, lat, lon]);
+  const from = useMemo(() => JSON.parse(fromKey) as Endpoint | null, [fromKey]);
+  const to = useMemo(() => JSON.parse(toKey) as Endpoint | null, [toKey]);
   const { result, error, loading, offline, refresh } = useConnections(from, to);
   // Le détail suit les actualisations ; si l'itinéraire n'est plus proposé, on garde la dernière version.
   const detail = selected ? (result?.connections.find((c) => c.key === selected.key) ?? selected) : null;
@@ -108,6 +119,25 @@ export default function ItineraryScreen({ initial }: Props) {
     );
   } else if (positionField && !position) {
     content = <GeoPrompt geo={geo} onLocate={locate} onChooseStop={() => setEditing(positionField)} />;
+  } else if (positionField && !(positionField === "from" ? from : to)) {
+    // Position connue, mais aucun arrêt TPG à moins de 2 km (calculé sur l'appareil).
+    content = (
+      <Prompt
+        icon={<NavigationArrowIcon size={26} weight="fill" aria-hidden />}
+        title="Aucun arrêt à proximité"
+        text="Aucun arrêt TPG à moins de 2 km de ta position."
+        action={
+          <>
+            <button type="button" onClick={locate} className={primaryButton}>
+              Réessayer
+            </button>
+            <button type="button" onClick={() => setEditing(positionField)} className={secondaryButton}>
+              Choisir un arrêt à la place
+            </button>
+          </>
+        }
+      />
+    );
   } else {
     const visible = (result?.connections ?? []).filter(
       (c) => now === null || new Date(c.departure.realtime ?? c.departure.scheduled).getTime() >= now - DEPARTED_GRACE_MS,
@@ -366,10 +396,14 @@ function legDeparture(l: RideLeg): Departure {
   };
 }
 
-function endpoint(place: Place | null, lat: number | null, lon: number | null): Endpoint | null {
+/**
+ * Extrémité envoyée au serveur. Ma position (`here`) y est réduite aux arrêts proches ;
+ * null tant qu'elle est inconnue, ou si aucun arrêt TPG n'est à moins de 2 km.
+ */
+function endpoint(place: Place | null, other: Place | null, here: { lat: number; lon: number } | null): Endpoint | null {
   if (!place) return null;
   if (place.kind === "stop") return { kind: "stop", stopId: place.id };
-  return lat !== null && lon !== null ? { kind: "position", lat, lon } : null;
+  return here && positionEndpoint(here.lat, here.lon, other?.kind === "stop" ? other.id : null);
 }
 
 function placeParam(place: Place): string {

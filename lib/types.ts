@@ -75,8 +75,18 @@ export type Trip = {
   stops: TripStop[];
 };
 
-/** Extrémité d'un itinéraire : un arrêt TPG (id DIDOK) ou une position (WGS84). */
-export type Endpoint = { kind: "stop"; stopId: string } | { kind: "position"; lat: number; lon: number };
+/** Arrêt TPG proche de ma position, avec la marche estimée jusqu'à lui. */
+export type WalkStop = { stopId: string; walkMin: number };
+
+/**
+ * Ma position comme extrémité d'itinéraire, réduite sur l'appareil (lib/walk.ts) :
+ * arrêts proches et marche jusqu'à chacun, plus la marche directe jusqu'à l'autre
+ * extrémité quand elle est à distance de marche. Aucune coordonnée.
+ */
+export type PositionEndpoint = { kind: "position"; near: WalkStop[]; directWalkMin: number | null };
+
+/** Extrémité d'un itinéraire : un arrêt TPG (id DIDOK) ou ma position. */
+export type Endpoint = { kind: "stop"; stopId: string } | PositionEndpoint;
 
 /** Montée ou descente d'une étape en transport. */
 export type LegStop = {

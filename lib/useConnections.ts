@@ -42,7 +42,7 @@ export function useConnections(from: Endpoint | null, to: Endpoint | null): Conn
       if (isAbort(err)) return;
       const off = typeof navigator !== "undefined" && !navigator.onLine;
       setOffline(off);
-      // 404 : message utile (p. ex. aucun arrêt TPG à moins de 2 km de la position).
+      // 404 : message utile (p. ex. arrêt inconnu du réseau TPG).
       const notFound = err instanceof ApiError && err.status === 404;
       setError(off ? "Hors ligne" : notFound ? err.message : "Impossible de calculer l’itinéraire.");
     } finally {
