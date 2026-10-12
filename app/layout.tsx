@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import InstallToast from "@/components/InstallToast";
 import TabBar from "@/components/TabBar";
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <InstallToast />
         <ThemeSync />
         <SwRegister />
+        <Analytics />
       </body>
     </html>
   );

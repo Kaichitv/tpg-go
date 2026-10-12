@@ -13,9 +13,9 @@ const CONTACT = "design@ludo-jdm.ch";
 
 const SUMMARY = [
   "Tes coordonnées ne quittent jamais ton appareil.",
-  "Ni compte, ni cookies, ni publicité, ni mesure d’audience.",
+  "Ni compte, ni cookies, ni publicité.",
   "Tes favoris et arrêts récents restent sur ton appareil.",
-  "Rien n’est conservé, hormis les suggestions que tu envoies et des journaux techniques effacés après environ une heure.",
+  "Rien n’est conservé, hormis les suggestions que tu envoies, des statistiques de visite anonymes et des journaux techniques effacés après environ une heure.",
 ];
 
 const LINK = "font-medium text-accent-ink underline underline-offset-2";
@@ -125,6 +125,29 @@ export default function PrivacyPage() {
         <p>Base légale : l’intérêt légitime à faire fonctionner et à sécuriser le service.</p>
       </Part>
 
+      <Part id="analytics" title="Mesure d’audience">
+        <p>
+          Pour savoir quels écrans servent et améliorer l’app, TPG Go utilise Vercel Web Analytics, sans cookie. À
+          chaque page affichée sont transmis :
+        </p>
+        <List>
+          <li>la page (par exemple l’arrêt consulté) ; les paramètres de l’adresse sont filtrés ;</li>
+          <li>la page d’où tu viens, le cas échéant ;</li>
+          <li>le pays, la région et la ville, déduits de ton adresse IP ;</li>
+          <li>le système, le navigateur et le type d’appareil ;</li>
+          <li>la date et l’heure.</li>
+        </List>
+        <p>
+          Ton adresse IP n’est pas enregistrée. Pour compter les visiteurs, Vercel calcule une empreinte à partir de
+          la requête, effacée après 24 heures. Le développeur ne voit que des statistiques globales, consultables un
+          mois ; Vercel peut les garder plus longtemps.
+        </p>
+        <p>
+          Base légale : l’intérêt légitime à améliorer le service. Tu peux t’y opposer en bloquant ce script avec un
+          bloqueur de contenu ou la protection contre le pistage de ton navigateur ; l’app fonctionne sans.
+        </p>
+      </Part>
+
       <Part id="timetables" title="Horaires">
         <p>
           Les horaires viennent de transport.opendata.ch. Le serveur de TPG Go l’interroge avec des identifiants
@@ -144,7 +167,8 @@ export default function PrivacyPage() {
       <Part id="never" title="Ce que TPG Go ne fait pas">
         <List>
           <li>Pas de compte ni d’inscription.</li>
-          <li>Pas de cookies, de publicité ni d’outil de mesure d’audience.</li>
+          <li>Pas de cookies ni de publicité.</li>
+          <li>Pas de suivi individuel : la mesure d’audience ne donne que des statistiques globales.</li>
           <li>Pas de profilage ni de décision automatisée.</li>
           <li>Aucune donnée vendue ni partagée à des fins commerciales.</li>
         </List>
