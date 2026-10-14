@@ -110,7 +110,11 @@ correspond pas au numéro du tableau, et la correspondance n'est pas garantie.
 ### Position
 
 La permission n'est demandée qu'au geste (« Utiliser ma position »), sauf si elle est déjà
-accordée (HIG, comme « À proximité »). Refusée, indisponible ou introuvable : message
+accordée (HIG, comme « À proximité ») : on localise alors dès que le trajet part de ma position
+ou y mène, jamais pour un trajet d'arrêt à arrêt. « Déjà accordée » est retenu sur l'appareil
+(drapeau `tpg-go:geo-allowed:v1`, effacé au premier refus) : Safari répond « prompt » à
+`permissions.query` à chaque chargement tant que la page n'a pas appelé l'API Geolocation
+([WebKit 293089](https://bugs.webkit.org/show_bug.cgi?id=293089)). Refusée, indisponible ou introuvable : message
 explicatif et bouton « Choisir un arrêt à la place ». Si une relocalisation échoue, on garde la
 dernière position connue et on le signale. Aucun arrêt TPG à moins de 2 km : message
 « Aucun arrêt à proximité », avec « Réessayer » et « Choisir un arrêt à la place ».

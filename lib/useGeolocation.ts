@@ -1,10 +1,10 @@
 "use client";
 
 // lib/useGeolocation.ts
-// Position de l'appareil pour « À proximité ». La permission n'est demandée qu'au
-// geste de l'utilisateur (HIG), sauf si elle est déjà accordée : on localise alors
-// dès l'ouverture. La dernière position est gardée en mémoire le temps de la
-// session, pour ne pas relocaliser à chaque changement d'onglet.
+// Position de l'appareil pour « À proximité » et l'itinéraire. La permission n'est
+// demandée qu'au geste de l'utilisateur (HIG) ; une fois accordée, on localise dès
+// l'ouverture. La dernière position est gardée en mémoire le temps de la session,
+// pour ne pas relocaliser à chaque changement d'onglet.
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -19,9 +19,15 @@ export type GeoState =
   | { status: "failed"; last: Position | null }; // position introuvable ou délai dépassé
 
 const FRESH_MS = 2 * 60_000;
+// Accès déjà accordé sur cet appareil (un drapeau, jamais la position). Safari répond
+// « prompt » à `permissions.query` à chaque chargement tant que la page n'a pas appelé
+// l'API Geolocation (WebKit, par conception) : sans ce rappel, il faudrait retoucher
+// « Utiliser ma position » à chaque ouverture de l'app sur iPhone.
+const ALLOWED_KEY = "tpg-go:geo-allowed:v1";
 let last: Position | null = null;
 
-export function useGeolocation() {
+/** `auto` : localiser dès l'ouverture si l'accès a déjà été accordé ; sinon, attendre `locate`. */
+export function useGeolocation(auto = true) {
   const [state, setState] = useState<GeoState>({ status: "idle" });
 
   const locate = useCallback(() => {
@@ -38,10 +44,17 @@ export function useGeolocation() {
           accuracyM: Math.round(p.coords.accuracy),
           at: Date.now(),
         };
+        rememberAllowed(true);
         setState({ status: "ready", position: last });
       },
       (err) => {
-        setState(err.code === err.PERMISSION_DENIED ? { status: "denied" } : { status: "failed", last });
+        if (err.code === err.PERMISSION_DENIED) {
+          // Refus ou accès retiré dans les réglages : on ne relocalise plus à l'ouverture.
+          rememberAllowed(false);
+          setState({ status: "denied" });
+        } else {
+          setState({ status: "failed", last });
+        }
       },
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
     );
@@ -56,7 +69,13 @@ export function useGeolocation() {
       setState({ status: "ready", position: last });
       return;
     }
-    // Permission déjà accordée : pas besoin d'attendre un geste.
+    if (!auto) return;
+    if (wasAllowed()) {
+      locate();
+      return;
+    }
+    // Pas de rappel (accordé avant ce drapeau, ou dans les réglages) : Chrome et
+    // Firefox savent déjà dire si l'accès est accordé.
     let cancelled = false;
     navigator.permissions
       ?.query({ name: "geolocation" })
@@ -69,11 +88,28 @@ export function useGeolocation() {
     return () => {
       cancelled = true;
     };
-  }, [locate]);
+  }, [auto, locate]);
 
   return { state, locate };
 }
 
 function supported(): boolean {
   return typeof navigator !== "undefined" && "geolocation" in navigator && window.isSecureContext;
+}
+
+function wasAllowed(): boolean {
+  try {
+    return localStorage.getItem(ALLOWED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberAllowed(allowed: boolean) {
+  try {
+    if (allowed) localStorage.setItem(ALLOWED_KEY, "1");
+    else localStorage.removeItem(ALLOWED_KEY);
+  } catch {
+    /* mode privé : il faudra retoucher « Utiliser ma position » à la prochaine ouverture */
+  }
 }

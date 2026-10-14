@@ -52,7 +52,10 @@ export default function ItineraryScreen({ initial }: Props) {
   const [selected, setSelected] = useState<Connection | null>(null);
   const [following, setFollowing] = useState<number | null>(null);
   const [returnTo, setReturnTo] = useState<number | null>(null);
-  const { state: geo, locate } = useGeolocation();
+  const positionField: Field | null =
+    query.from?.kind === "position" ? "from" : query.to?.kind === "position" ? "to" : null;
+  // Pas de localisation (ni d'invite iOS) pour un trajet d'arrêt à arrêt.
+  const { state: geo, locate } = useGeolocation(positionField !== null);
   const now = useNow(15_000);
 
   // URL et mémoire de session suivent la saisie (sans navigation ni rechargement serveur).
@@ -86,9 +89,6 @@ export default function ItineraryScreen({ initial }: Props) {
   // Le détail suit les actualisations ; si l'itinéraire n'est plus proposé, on garde la dernière version.
   const detail = selected ? (result?.connections.find((c) => c.key === selected.key) ?? selected) : null;
   const followedLeg = detail && following !== null ? detail.legs[following] : undefined;
-
-  const positionField: Field | null =
-    query.from?.kind === "position" ? "from" : query.to?.kind === "position" ? "to" : null;
 
   const pick = (field: Field, place: Place) => {
     setQuery((q) => {

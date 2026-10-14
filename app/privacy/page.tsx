@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Confidentialité" };
 
 // Le texte doit rester fidèle au code : à mettre à jour, avec la date, dès qu'un
 // traitement change (nouvelle donnée, sous-traitant, durée de conservation…).
-const UPDATED = "12 octobre 2026";
+const UPDATED = "14 octobre 2026";
 const CONTACT = "design@ludo-jdm.ch";
 
 const SUMMARY = [
@@ -55,8 +55,8 @@ export default function PrivacyPage() {
       <Part id="position" title="Ta position">
         <p>
           TPG Go n’utilise ta position que si tu touches « Utiliser ma position » et que tu autorises la localisation
-          dans ton navigateur. Une fois l’autorisation donnée, l’app te localise directement à l’ouverture des onglets
-          Recherche et Itinéraire.
+          dans ton navigateur. Une fois l’autorisation donnée, l’app te localise directement à l’ouverture de l’onglet
+          Recherche, et de l’onglet Itinéraire quand le trajet part de ta position ou y mène.
         </p>
         <List>
           <li>
@@ -71,7 +71,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             Ta position reste en mémoire tant que l’app est ouverte. Elle n’est jamais enregistrée, ni sur ton appareil
-            ni ailleurs.
+            ni ailleurs. L’app retient seulement, sur ton appareil, que tu as autorisé la localisation ; ce rappel
+            s’efface dès que l’accès est refusé.
           </li>
         </List>
         <p>
@@ -82,8 +83,8 @@ export default function PrivacyPage() {
 
       <Part id="device" title="Sur ton appareil">
         <p>
-          Tes favoris, tes arrêts récents, ton choix de thème et le rappel d’installation sont enregistrés dans le
-          stockage local de ton navigateur et ne sont jamais transmis. Pour fonctionner hors ligne, l’app garde aussi
+          Tes favoris, tes arrêts récents, ton choix de thème, le rappel d’installation et le fait que tu as autorisé la
+          localisation (jamais ta position) sont enregistrés dans le stockage local de ton navigateur et ne sont jamais transmis. Pour fonctionner hors ligne, l’app garde aussi
           une copie de ses propres pages, sans aucune donnée personnelle.
         </p>
         <p>
