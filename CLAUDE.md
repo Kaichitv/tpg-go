@@ -40,7 +40,7 @@ PWA des passages TPG en temps réel. Next.js 15 (App Router) + TypeScript, PWA i
 - Accessibilité obligatoire sur tout nouveau composant (aria-labels sur boutons-icônes, focus visibles).
 
 ## Roadmap
-- **v1** : recherche d'arrêt, favoris, tableau des passages, suivi de trajet (temporel), itinéraire (départ immédiat).
+- **v1** : recherche d'arrêt, favoris, tableau des passages, suivi de trajet (temporel), itinéraire (départ immédiat ou planifié : partir à / arriver à).
 - **v2** : tester **OJP 2.0** (opentransportdata.swiss) comme source live : précision des horaires, suppressions, perturbations. Pas GTFS-RT. Doc : `docs/v2-ojp.md`. Aussi : arrêts à proximité (géoloc), notifications.
 
 ## Honnêteté produit

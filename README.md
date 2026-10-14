@@ -23,7 +23,8 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
   à vol d'oiseau, prochains passages) ; la position n'est demandée qu'au geste, sauf si déjà
   autorisée, et les arrêts proches sont calculés sur l'appareil : elle n'est jamais envoyée.
 - **Itinéraire** : d'un arrêt ou de ma position à un arrêt TPG, prochains itinéraires (lignes,
-  marche, changements, compte à rebours, temps réel), détail en feuille (frise des étapes, quais,
+  marche, changements, compte à rebours, temps réel), ou planifiés (**Partir à** / **Arriver à**
+  un jour et une heure, jusqu'à 30 jours à l'avance), détail en feuille (frise des étapes, quais,
   arrêts intermédiaires) et **Suivre** une étape TPG. Favoris et récents comme destinations en un
   toucher ; bouton **Y aller** sur la page d'un arrêt. Marche depuis la position **estimée** et
   signalée comme telle ; seuls les arrêts proches et les minutes de marche partent vers le
@@ -56,25 +57,27 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
 app/
   page.tsx                  onglet Favoris (accueil)
   search/page.tsx           onglet Recherche (recherche, récents, à proximité)
-  itinerary/page.tsx        onglet Itinéraire (?from=&to=, id d'arrêt ou « here »)
+  itinerary/page.tsx        onglet Itinéraire (?from=&to=, id d'arrêt ou « here » ; depart=|arrive=)
   settings/page.tsx         onglet Réglages (thème, suggestions, confidentialité, à propos)
   privacy/page.tsx          politique de confidentialité (poussée dans l'onglet d'origine)
   stop/[id]/page.tsx        tableau des passages d'un arrêt (poussé dans l'onglet d'origine)
   api/departures/route.ts   prochains passages (?stop=<id|nom>&limit=)
   api/locations/route.ts    recherche d'arrêts (?q=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
-  api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « here » + near=&walk=)
+  api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « here » + near=&walk= ; at=&arriveBy=)
   api/suggestions/route.ts  POST d'une suggestion { name?, message, client? } → webhook Discord
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
                             FavStar, TripSheet, FavoriteCard, StatusLine, ItineraryScreen,
-                            RouteFields, ConnectionCard, ConnectionSheet…
+                            RouteFields, PlannedTimeField, Wheel, ConnectionCard, ConnectionSheet…
 lib/
   types.ts                  modèle de domaine partagé (indépendant de la source)
   transport.ts              SEUL module qui connaît transport.opendata.ch (serveur)
   stopIndex.ts              recherche / proximité dans les arrêts TPG (partagé client/serveur)
   walk.ts                   ma position → arrêts proches + marche estimée, calculés sur l'appareil
   itinerary.ts              itinéraires depuis / vers ma position : appariement, marche, tri (serveur)
+  plannedTime.ts            itinéraire planifié : bornes, libellés, format d'URL (partagé)
+  zurichTime.ts             heure murale suisse ↔ instant, quel que soit le fuseau (partagé)
   tpgStops.json             snapshot committé, généré par scripts/build-tpg-stops.mjs
   api.ts                    fetchers client vers /api/*
   suggestion.ts             validation d'une suggestion (partagée client/serveur)
@@ -82,7 +85,7 @@ lib/
   discord.ts                envoi des suggestions au webhook Discord (serveur)
   favorites.ts              favoris (localStorage + useSyncExternalStore)
   useBoard.ts               polling 30 s, 15 s si passage < 3 min (visible uniquement), reprise au premier plan
-  useConnections.ts         itinéraires, actualisés toutes les 60 s (visible uniquement)
+  useConnections.ts         itinéraires, actualisés toutes les 60 s (10 min si planifiés à plus d'1 h)
   useStopSearch.ts          autocomplétion d'arrêts (recherche et champs d'itinéraire)
   progress.ts               progression temporelle d'une course
   lineColors.ts             couleurs de badge + contraste WCAG (overrides → snapshot → orange)
@@ -197,7 +200,7 @@ npm run test:api "Bel-Air"
   v2, voir [docs/v2-ojp.md](docs/v2-ojp.md)).
 - Pas de position GPS des véhicules : aucune source publique ne la fournit pour les TPG, le
   GTFS-RT suisse compris.
-- Itinéraires : départ immédiat uniquement, marche estimée à vol d'oiseau, lignes non TPG (Léman
+- Itinéraires : pas de « Plus tôt / Plus tard », marche estimée à vol d'oiseau, lignes non TPG (Léman
   Express, CFF) en badge neutre faute de couleurs officielles (voir [docs/itinerary.md](docs/itinerary.md)).
 - Anti-abus des suggestions « best effort » (pot de miel, même origine, 5 envois / 10 min par IP
   en mémoire de l'instance serverless, remis à zéro au démarrage à froid ; une IP est oubliée dès

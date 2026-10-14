@@ -1,6 +1,7 @@
 // lib/connectionLabels.ts
 // Libellés partagés par la carte et le détail d'un itinéraire.
 
+import { dayPhrase } from "./plannedTime";
 import { countdown } from "./time";
 import type { Connection } from "./types";
 
@@ -21,16 +22,21 @@ export function transfersLabel(n: number): string {
 /**
  * « Partir dans 4 min » si l'itinéraire commence à pied, « Départ dans 4 min » s'il
  * commence à bord. `approx` : pas de temps réel, compte à rebours préfixé de « ~ ».
+ * Un autre jour (itinéraire planifié) : « Départ demain », « Départ le jeu. 15 oct. ».
  */
 export function leaveLabel(c: Connection, now: number, approx = false): string {
   const verb = c.legs[0]?.kind === "walk" ? "Partir" : "Départ";
-  const cd = countdown(c.departure.realtime ?? c.departure.scheduled, now);
+  const iso = c.departure.realtime ?? c.departure.scheduled;
+  const cd = countdown(iso, now);
   switch (cd.kind) {
     case "now":
       return `${verb} maintenant`;
     case "minutes":
       return `${verb} dans ${approx ? "~" : ""}${cd.minutes} min`;
-    case "clock":
-      return `${verb} à ${cd.clock}`;
+    case "clock": {
+      // L'heure figure déjà sur la carte : seul le jour est utile.
+      const day = dayPhrase(iso, now);
+      return day ? `${verb} ${day}` : `${verb} à ${cd.clock}`;
+    }
   }
 }

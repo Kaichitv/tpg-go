@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import {
   ArrowsDownUpIcon,
   CircleNotchIcon,
@@ -26,6 +26,8 @@ type Props = {
   onEdit: (field: Field | null) => void;
   onPick: (field: Field, place: Place) => void;
   onSwap: () => void;
+  /** Ligne sous les deux champs (heure du trajet), masquée pendant la saisie. */
+  footer?: ReactNode;
 };
 
 type Option =
@@ -41,7 +43,7 @@ const LABELS: Record<Field, string> = { from: "Départ", to: "Arrivée" };
  * récents ; dès 2 lettres, les arrêts TPG correspondants. Les options s'affichent
  * sous la carte, dans le flux de la page, comme dans la recherche.
  */
-export default function RouteFields({ query, editing, onEdit, onPick, onSwap }: Props) {
+export default function RouteFields({ query, editing, onEdit, onPick, onSwap, footer }: Props) {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const fromRef = useRef<HTMLButtonElement>(null);
@@ -167,21 +169,24 @@ export default function RouteFields({ query, editing, onEdit, onPick, onSwap }: 
 
   return (
     <>
-      <Card elevation={2} className="mb-4 flex items-center overflow-hidden">
-        <div className="min-w-0 flex-1 divide-y divide-hairline">
-          {row("from", fromRef)}
-          {row("to", toRef)}
+      <Card elevation={2} className="mb-4 overflow-hidden">
+        <div className="flex items-center">
+          <div className="min-w-0 flex-1 divide-y divide-hairline">
+            {row("from", fromRef)}
+            {row("to", toRef)}
+          </div>
+          {!editing && (
+            <IconButton
+              label="Inverser départ et arrivée"
+              onClick={onSwap}
+              disabled={!query.from && !query.to}
+              className="mr-1 text-accent-ink"
+            >
+              <ArrowsDownUpIcon size={22} weight="bold" aria-hidden />
+            </IconButton>
+          )}
         </div>
-        {!editing && (
-          <IconButton
-            label="Inverser départ et arrivée"
-            onClick={onSwap}
-            disabled={!query.from && !query.to}
-            className="mr-1 text-accent-ink"
-          >
-            <ArrowsDownUpIcon size={22} weight="bold" aria-hidden />
-          </IconButton>
-        )}
+        {!editing && footer && <div className="border-t border-hairline">{footer}</div>}
       </Card>
 
       {editing && (

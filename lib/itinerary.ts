@@ -10,7 +10,7 @@
 
 import { getTpgStop } from "./stopIndex";
 import { getConnections, NotFoundError } from "./transport";
-import type { Connection, Endpoint, Stop, TimePoint, WalkLeg } from "./types";
+import type { Connection, Endpoint, PlannedTime, Stop, TimePoint, WalkLeg } from "./types";
 
 /** Itinéraires demandés par paire d'arrêts quand une extrémité est une position. */
 const PER_PAIR = 4;
@@ -22,11 +22,20 @@ const DEPARTED_GRACE_MS = 30_000;
 type Place = { stop: Stop; walkMin: number };
 
 /**
- * Itinéraires de `from` à `to`, du prochain départ au plus tardif. Au plus une
- * extrémité peut être une position (vérifié par la route).
+ * Itinéraires de `from` à `to`, triés par départ. Au plus une extrémité peut être
+ * une position (vérifié par la route). `when` : partir à (les premiers départs
+ * à partir de cette heure) ou arriver à (les derniers itinéraires qui arrivent
+ * à temps) ; null = partir maintenant.
  */
-export async function planConnections(from: Endpoint, to: Endpoint): Promise<Connection[]> {
+export async function planConnections(
+  from: Endpoint,
+  to: Endpoint,
+  when: PlannedTime | null = null,
+): Promise<Connection[]> {
   const now = Date.now();
+  const arriveBy = when?.mode === "arrive";
+  // Heure demandée ; un départ n'est jamais cherché dans le passé.
+  const target = when ? (arriveBy ? Date.parse(when.at) : Math.max(Date.parse(when.at), now)) : now;
   const origins = places(from);
   const destinations = places(to);
   const byPosition = from.kind === "position" || to.kind === "position";
@@ -37,8 +46,14 @@ export async function planConnections(from: Endpoint, to: Endpoint): Promise<Con
   const settled = await Promise.allSettled(
     pairs.map(async ([o, d]) => {
       const list = await getConnections(o.stop.id, d.stop.id, {
-        // Depuis une position, inutile de proposer un départ qu'on n'atteindra pas à pied.
-        at: o.walkMin ? new Date(now + o.walkMin * 60_000) : undefined,
+        // Partir à : on n'atteint l'arrêt de montée qu'après la marche depuis la position.
+        // Arriver à : il faut descendre assez tôt pour finir à pied jusqu'à la position.
+        at: arriveBy
+          ? new Date(target - d.walkMin * 60_000)
+          : when || o.walkMin
+            ? new Date(target + o.walkMin * 60_000)
+            : undefined,
+        arriveBy,
         limit: byPosition ? PER_PAIR : MAX_RESULTS,
       });
       return list.map((c) => withWalks(c, o, d));
@@ -49,12 +64,12 @@ export async function planConnections(from: Endpoint, to: Endpoint): Promise<Con
   const failure = settled.find((r): r is PromiseRejectedResult => r.status === "rejected");
   if (failure && !found.length) throw failure.reason;
 
-  const catchable = found.filter((c) => time(c.departure) >= now - DEPARTED_GRACE_MS);
-  const walk = walkOnly(from, to, now);
-  if (!walk) return prune(catchable);
+  const walk = walkOnly(from, to, target, arriveBy);
   // On peut partir à pied à toute heure : un itinéraire qui ne va pas plus vite ne sert à rien.
-  const walkMs = time(walk.arrival) - time(walk.departure);
-  return prune([walk, ...catchable.filter((c) => time(c.arrival) - time(c.departure) < walkMs)]);
+  const walkMs = walk ? time(walk.arrival) - time(walk.departure) : Infinity;
+  const options = [...(walk ? [walk] : []), ...found.filter((c) => time(c.arrival) - time(c.departure) < walkMs)];
+  const catchable = options.filter((c) => time(c.departure) >= now - DEPARTED_GRACE_MS);
+  return prune(catchable, arriveBy);
 }
 
 function places(e: Endpoint): Place[] {
@@ -100,16 +115,20 @@ function withWalks(c: Connection, o: Place, d: Place): Connection {
   return { ...c, departure, arrival, legs };
 }
 
-/** Destination (ou départ) à distance de marche de la position : l'option « à pied ». */
-function walkOnly(from: Endpoint, to: Endpoint, now: number): Connection | null {
+/**
+ * Destination (ou départ) à distance de marche de la position : l'option « à pied »,
+ * partant à `at` (ou y arrivant, avec `arriveBy`).
+ */
+function walkOnly(from: Endpoint, to: Endpoint, at: number, arriveBy: boolean): Connection | null {
   const position = from.kind === "position" ? from : to.kind === "position" ? to : null;
   const other = from.kind === "stop" ? from : to.kind === "stop" ? to : null;
   const stop = other && getTpgStop(other.stopId);
   const min = position?.directWalkMin;
   if (!min || !stop) return null;
 
-  const start = new Date(now).toISOString();
-  const end = new Date(now + min * 60_000).toISOString();
+  const startMs = arriveBy ? at - min * 60_000 : at;
+  const start = new Date(startMs).toISOString();
+  const end = new Date(startMs + min * 60_000).toISOString();
   const leg =
     from.kind === "position" ? walkLeg(null, stop, start, end, min) : walkLeg(stop, null, start, end, min);
   return {
@@ -129,8 +148,10 @@ function walkLeg(from: Stop | null, to: Stop | null, departure: string, arrival:
  * Mêmes courses prises à deux arrêts voisins : on garde l'option qui arrive le plus
  * tôt, puis qui part le plus tard. On écarte ensuite les itinéraires dominés
  * (partir plus tôt pour arriver plus tard, avec autant de changements ou plus).
+ * On garde les premiers départs, ou les derniers avec `arriveBy` (au plus près de
+ * l'heure d'arrivée demandée).
  */
-function prune(list: Connection[]): Connection[] {
+function prune(list: Connection[], arriveBy: boolean): Connection[] {
   const best = new Map<string, Connection>();
   for (const c of list) {
     const rides = c.legs.flatMap((l) => (l.kind === "ride" ? [`${l.journey}/${l.line}`] : []));
@@ -143,10 +164,10 @@ function prune(list: Connection[]): Connection[] {
     if (better) best.set(sig, c);
   }
   const unique = [...best.values()];
-  return unique
+  const sorted = unique
     .filter((a) => !unique.some((b) => b !== a && dominates(b, a)))
-    .sort((a, b) => time(a.departure) - time(b.departure) || time(a.arrival) - time(b.arrival))
-    .slice(0, MAX_RESULTS);
+    .sort((a, b) => time(a.departure) - time(b.departure) || time(a.arrival) - time(b.arrival));
+  return arriveBy ? sorted.slice(-MAX_RESULTS) : sorted.slice(0, MAX_RESULTS);
 }
 
 function dominates(b: Connection, a: Connection): boolean {

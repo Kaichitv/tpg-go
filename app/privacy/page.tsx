@@ -125,8 +125,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           Comme sur tout site web, chaque requête peut être inscrite dans des journaux techniques : adresse IP, date et
-          heure, adresse demandée (par exemple l’arrêt consulté, ou les arrêts proches pour un itinéraire depuis ta
-          position) et type de navigateur. Ces journaux servent au fonctionnement et à la sécurité du service, et sont
+          heure, adresse demandée (par exemple l’arrêt consulté, la date et l’heure choisies pour un itinéraire, ou
+          les arrêts proches pour un itinéraire depuis ta position) et type de navigateur. Ces journaux servent au fonctionnement et à la sécurité du service, et sont
           effacés après environ une heure.
         </p>
         <p>Base légale : l’intérêt légitime à faire fonctionner et à sécuriser le service.</p>

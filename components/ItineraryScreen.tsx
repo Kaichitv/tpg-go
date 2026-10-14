@@ -10,6 +10,7 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react/ssr";
 import { useHydrated } from "@/lib/favorites";
+import { isPlannable, plannedParam } from "@/lib/plannedTime";
 import { splitStopName } from "@/lib/stopName";
 import { useNow } from "@/lib/time";
 import type { Connection, Departure, Endpoint, ItineraryQuery, Place, RideLeg } from "@/lib/types";
@@ -21,13 +22,14 @@ import BoardSkeleton from "./BoardSkeleton";
 import Card from "./Card";
 import ConnectionCard from "./ConnectionCard";
 import ConnectionSheet from "./ConnectionSheet";
+import PlannedTimeField from "./PlannedTimeField";
 import RouteFields, { type Field } from "./RouteFields";
 import Screen from "./Screen";
 import Section from "./Section";
 import StatusLine from "./StatusLine";
 import TripSheet from "./TripSheet";
 
-const DEFAULT_QUERY: ItineraryQuery = { from: { kind: "position" }, to: null };
+const DEFAULT_QUERY: ItineraryQuery = { from: { kind: "position" }, to: null, when: null };
 /** Un itinéraire dont le départ est passé depuis plus longtemps est masqué en attendant l'actualisation. */
 const DEPARTED_GRACE_MS = 60_000;
 
@@ -36,14 +38,15 @@ const DEPARTED_GRACE_MS = 60_000;
 let lastQuery: ItineraryQuery | null = null;
 
 type Props = {
-  /** Saisie lue dans l'URL (?from=&to=), ou null si l'URL n'en porte pas. */
+  /** Saisie lue dans l'URL (?from=&to=&depart=|arrive=), ou null si l'URL n'en porte pas. */
   initial: ItineraryQuery | null;
 };
 
 /**
- * Onglet Itinéraire : départ (par défaut, ma position) et arrivée, puis les
- * prochains itinéraires. L'état vit dans l'URL (/itinerary?from=…&to=…, « here »
- * pour la position) : lien « Y aller » d'un arrêt, retour arrière, partage.
+ * Onglet Itinéraire : départ (par défaut, ma position), arrivée et heure (par
+ * défaut, maintenant), puis les itinéraires. L'état vit dans l'URL
+ * (/itinerary?from=…&to=…&arrive=2026-10-15T08:00, « here » pour la position) :
+ * lien « Y aller » d'un arrêt, retour arrière, partage.
  */
 export default function ItineraryScreen({ initial }: Props) {
   const [query, setQuery] = useState<ItineraryQuery>(() => initial ?? lastQuery ?? DEFAULT_QUERY);
@@ -58,13 +61,22 @@ export default function ItineraryScreen({ initial }: Props) {
   const { state: geo, locate } = useGeolocation(positionField !== null);
   const now = useNow(15_000);
 
+  // Heure choisie dépassée (onglet rouvert plus tard, lien ancien) : retour à « maintenant ».
+  const expired = query.when !== null && now !== null && !isPlannable(query.when.at, now);
+  const when = expired ? null : query.when;
+  useEffect(() => {
+    if (expired) setQuery((q) => ({ ...q, when: null }));
+  }, [expired]);
+
   // URL et mémoire de session suivent la saisie (sans navigation ni rechargement serveur).
   useEffect(() => {
     lastQuery = query;
     const params = new URLSearchParams();
     if (query.from) params.set("from", placeParam(query.from));
     if (query.to) params.set("to", placeParam(query.to));
-    const url = params.size ? `/itinerary?${params}` : "/itinerary";
+    if (query.when) params.set(query.when.mode, plannedParam(query.when));
+    // « : » est permis dans une requête : l'heure reste lisible (arrive=2026-10-15T08:00).
+    const url = params.size ? `/itinerary?${params.toString().replaceAll("%3A", ":")}` : "/itinerary";
     if (url !== window.location.pathname + window.location.search) window.history.replaceState(null, "", url);
   }, [query]);
 
@@ -85,7 +97,7 @@ export default function ItineraryScreen({ initial }: Props) {
   }, [query.from, query.to, lat, lon]);
   const from = useMemo(() => JSON.parse(fromKey) as Endpoint | null, [fromKey]);
   const to = useMemo(() => JSON.parse(toKey) as Endpoint | null, [toKey]);
-  const { result, error, loading, offline, refresh } = useConnections(from, to);
+  const { result, error, loading, offline, refresh } = useConnections(from, to, when);
   // Le détail suit les actualisations ; si l'itinéraire n'est plus proposé, on garde la dernière version.
   const detail = selected ? (result?.connections.find((c) => c.key === selected.key) ?? selected) : null;
   const followedLeg = detail && following !== null ? detail.legs[following] : undefined;
@@ -100,7 +112,7 @@ export default function ItineraryScreen({ initial }: Props) {
     setEditing(null);
   };
 
-  const swap = () => setQuery((q) => ({ from: q.to, to: q.from }));
+  const swap = () => setQuery((q) => ({ ...q, from: q.to, to: q.from }));
 
   let content: ReactNode;
   if (!query.to) {
@@ -176,7 +188,13 @@ export default function ItineraryScreen({ initial }: Props) {
                 ))}
               </ol>
             ) : (
-              <p className="px-4 py-5 text-[15px] text-muted">Aucun itinéraire trouvé pour le moment.</p>
+              <p className="px-4 py-5 text-[15px] text-muted">
+                {when?.mode === "arrive"
+                  ? "Aucun itinéraire ne permet d’arriver à l’heure choisie."
+                  : when
+                    ? "Aucun itinéraire trouvé à partir de l’heure choisie."
+                    : "Aucun itinéraire trouvé pour le moment."}
+              </p>
             )
           ) : error && !loading ? (
             <div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
@@ -201,7 +219,14 @@ export default function ItineraryScreen({ initial }: Props) {
 
   return (
     <Screen title="Itinéraire">
-      <RouteFields query={query} editing={editing} onEdit={setEditing} onPick={pick} onSwap={swap} />
+      <RouteFields
+        query={query}
+        editing={editing}
+        onEdit={setEditing}
+        onPick={pick}
+        onSwap={swap}
+        footer={<PlannedTimeField value={when} now={now} onChange={(w) => setQuery((q) => ({ ...q, when: w }))} />}
+      />
       {!editing && content}
 
       {detail && following === null && (

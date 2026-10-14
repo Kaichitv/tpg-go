@@ -1,7 +1,7 @@
 # Itinéraire
 
 Calcul d'itinéraires sur le réseau TPG : d'un arrêt (ou de ma position) à un autre, avec les
-prochains départs, la durée, les changements et la marche. Troisième onglet de l'app
+prochains départs (ou à une date et une heure choisies), la durée, les changements et la marche. Troisième onglet de l'app
 (Favoris · Recherche · **Itinéraire** · Réglages).
 
 ## Pourquoi
@@ -23,8 +23,59 @@ arrêt. La recherche ne change pas : on ajoute un onglet dédié et des raccourc
   - clavier ↑ ↓ Entrée Échap ; « Annuler » ou Échap rend le focus au champ.
 - Bouton ⇅ : inverse départ et arrivée (« Ma position » peut aussi être l'arrivée).
 - Choisir dans un champ l'extrémité déjà présente dans l'autre vide cet autre champ.
-- La saisie est gardée en mémoire le temps de la session : en revenant sur l'onglet, on retrouve
-  le dernier itinéraire (comportement d'onglet iOS).
+- La saisie (heure comprise) est gardée en mémoire le temps de la session : en revenant sur
+  l'onglet, on retrouve le dernier itinéraire (comportement d'onglet iOS).
+
+### Heure du trajet
+
+Suggestion d'utilisateur : « si je souhaite me rendre à un endroit demain à 8h, je ne peux pas
+sélectionner une date et une heure de départ ou d'arrivée ».
+
+Troisième ligne de la carte Départ / Arrivée, masquée pendant la saisie d'un arrêt :
+
+```
+○  Départ   Ma position                  ⇅
+📍 Arrivée  Genève-Aéroport, gare-Arena
+🕐 Arriver demain à 08:00                ⊗
+```
+
+- Par défaut « Partir maintenant ». La toucher ouvre une feuille (même schéma `<dialog>` que le
+  détail) : contrôle segmenté **Partir à / Arriver à**, puis une **roue** jour · heure · minutes,
+  comme Plans d'Apple, et « Valider » ; « Partir maintenant » revient au départ immédiat.
+
+  ```
+  ┌ Partir à ─┬─ Arriver à ┐
+     Aujourd'hui   16   45
+  ┃  Demain        18 : 55  ┃
+     Ven. 16 oct.  19
+  ```
+
+  - Jour sur 30 jours, heures 00–23, minutes de 5 en 5. À l'ouverture : l'heure choisie, sinon
+    maintenant arrondi aux 5 min suivantes.
+  - Roue personnalisée plutôt que les contrôles natifs : même rendu sur tous les appareils (le
+    champ `time` est une roue en bulle sur iOS, une horloge sur Android, un champ texte sur
+    ordinateur), toujours en 24 h, et « Demain » sans ouvrir de liste.
+  - Défilement natif aimanté (`scroll-snap`), donc l'inertie du système ; toucher ou cliquer une
+    ligne l'amène au centre ; molette à la souris.
+  - Chaque colonne est une `listbox` (`aria-activedescendant`) : ↑ ↓, Page ↑ / Page ↓, Début /
+    Fin ; lecture complète des options (« demain, jeudi 15 octobre », « 8 heures »). Lignes de
+    44 px ; fondu haut / bas : la ligne choisie et ses voisines restent au-dessus de 4,5:1, les
+    lignes du bord s'estompent (indice de défilement, comme sur iOS).
+- Une heure passée est refusée (« Cette heure est déjà passée. ») ; l'heure sautée au passage à
+  l'heure d'été aussi (« Cette heure n'existe pas ce jour-là »).
+- Heure choisie : la ligne la reprend en gras (« Partir à 17:30 », « Arriver demain à 08:00 »,
+  « Partir le sam. 17 oct. à 07:30 ») avec une croix pour revenir à « maintenant ».
+- Toujours en **heure suisse**, quel que soit le fuseau de l'appareil (comme toutes les heures
+  de l'app).
+- Une heure dépassée de plus d'une minute (onglet rouvert plus tard, lien ancien) repasse
+  d'elle-même à « Partir maintenant ».
+- **Partir à** : les premiers itinéraires à partir de cette heure. **Arriver à** : les derniers
+  qui arrivent à temps, toujours triés par départ (le plus utile, le départ le plus tardif, est
+  en bas de liste).
+- Sur les cartes et dans le détail, un départ un autre jour s'affiche « Départ demain » ou
+  « Départ le jeu. 15 oct. » au lieu du compte à rebours.
+- Plus d'une heure avant l'heure choisie, le temps réel n'est pas encore connu : actualisation
+  toutes les 10 min au lieu de 60 s, et pas de bouton « Suivre ».
 
 ### Raccourci « Y aller »
 
@@ -54,6 +105,9 @@ Depuis Bel-Air · 2 changements    Partir dans 1 min
   retour du réseau ; un itinéraire dont le départ est passé de plus d'une minute est masqué.
 - En cas d'échec d'actualisation, les derniers résultats restent affichés, signalés comme
   non actualisés.
+- Aucun résultat : « Aucun itinéraire trouvé pour le moment. », ou pour une heure choisie
+  « … à partir de l'heure choisie. » / « Aucun itinéraire ne permet d'arriver à l'heure
+  choisie. ».
 - Toucher une carte ouvre son **détail** (ci-dessous).
 
 ### Détail d'un itinéraire
@@ -102,7 +156,8 @@ cette course :
 - progression **déduite des horaires**, comme partout dans l'app ; les correspondances d'un
   arrêt restent accessibles.
 
-« Suivre » n'est proposé que pour les lignes TPG et tant que l'étape n'est pas terminée : le
+« Suivre » n'est proposé que pour les lignes TPG, tant que l'étape n'est pas terminée et à
+moins d'une heure de son départ (un trajet planifié pour demain ne se suit pas encore) : le
 suivi retrouve la course dans le tableau des passages de l'arrêt (même identifiant de course
 et même numéro de ligne, vérifié). Pour les trains, le libellé affiché (« IR 90 ») ne
 correspond pas au numéro du tableau, et la correspondance n'est pas garantie.
@@ -132,13 +187,17 @@ L'état vit dans l'URL, mise à jour sans navigation (`history.replaceState`) :
 | `/itinerary?to=8587387` | Ma position → Genève, Bel-Air |
 | `/itinerary?from=8587387&to=8592935` | Bel-Air → Genève-Aéroport, gare-Arena |
 | `/itinerary?from=8592935&to=here` | Aéroport → ma position |
+| `/itinerary?from=8587387&to=8592935&arrive=2026-10-15T08:00` | Bel-Air → Aéroport, arriver le 15 oct. à 08:00 |
+| `/itinerary?to=8592935&depart=2026-10-15T07:30` | Ma position → Aéroport, partir le 15 oct. à 07:30 |
 
 `here` = ma position. Les ids sont des ids DIDOK de l'index TPG ; un id inconnu est ignoré.
-Les noms sont résolus côté serveur (`app/itinerary/page.tsx`) dans l'index local.
+`depart` / `arrive` : heure murale suisse `AAAA-MM-JJTHH:mm`, lisible et partageable ; une
+heure invalide, passée ou à plus de 30 jours est ignorée (départ immédiat). Les noms et l'heure
+sont résolus côté serveur (`app/itinerary/page.tsx`).
 
 ## API
 
-### `GET /api/connections?from=&to=[&near=&walk=]`
+### `GET /api/connections?from=&to=[&near=&walk=][&at=[&arriveBy=1]]`
 
 Chaque extrémité est un **id d'arrêt TPG** (`8587387`) ou **`here`** (ma position, au plus une
 extrémité). La position elle-même n'est **jamais envoyée** : l'appareil la réduit
@@ -150,6 +209,14 @@ extrémité). La position elle-même n'est **jamais envoyée** : l'appareil la r
 
 Exemple : `?from=here&to=8592935&near=8592862:3,8587387:4,8592794:4`. Les minutes sont bornées
 (1 à 33 pour `near`, 1 à 13 pour `walk`), tout autre format est refusé (400).
+
+Heure planifiée (facultative, sinon départ immédiat) :
+
+- `at=<ISO 8601>` : partir à cette heure ; un départ n'est jamais cherché dans le passé ;
+- `arriveBy=1` (avec `at`) : arriver au plus tard à cette heure.
+
+`at` est un instant (le client convertit l'heure suisse choisie), accepté d'une heure dans le
+passé (horloges décalées) à 31 jours à l'avance ; au-delà, ou mal formé : 400.
 
 Réponse (`ConnectionsResult`, `lib/types.ts`) :
 
@@ -174,7 +241,7 @@ WalkLeg = { kind: "walk", from: Stop | null, to: Stop | null,   // null = ma pos
 
 | Statut | Cas |
 | --- | --- |
-| 400 `bad_request` | paramètre absent ou mal formé (dont l'ancien `lat,lon`), deux positions, départ = arrivée |
+| 400 `bad_request` | paramètre absent ou mal formé (dont l'ancien `lat,lon`), deux positions, départ = arrivée, `at` hors bornes |
 | 404 `not_found` | id hors réseau TPG, ou aucun des arrêts `near` connu (index d'une version précédente) |
 | 502 `upstream` | source injoignable ou en erreur |
 
@@ -185,8 +252,9 @@ arrêts proches la révèlent à peu près), `public` sinon. Côté serveur, cha
 
 ### Source
 
-`getConnections(fromId, toId, { at, limit })` dans `lib/transport.ts` appelle
-`transport.opendata.ch/v1/connections`. Constats qui ont guidé l'implémentation (oct. 2026) :
+`getConnections(fromId, toId, { at, arriveBy, limit })` dans `lib/transport.ts` appelle
+`transport.opendata.ch/v1/connections` (`date`, `time` en heure suisse, `isArrivalTime=1`).
+Constats qui ont guidé l'implémentation (oct. 2026) :
 
 - **Toujours des ids, jamais des noms** : `from=Bel-Air` est résolu en « Bel-Air LEB »
   (Lausanne) et renvoie un trajet de 1 h 26 vers l'aéroport.
@@ -194,6 +262,10 @@ arrêts proches la révèlent à peu près), `public` sinon. Côté serveur, cha
 - **Adresses mal résolues** : « Rue du Rhône 8, Genève » part de l'arrêt Rue du Lac (~1 km)
   alors que Bel-Air est à 155 m.
 - Les itinéraires incluent Léman Express et trains CFF, souvent les plus rapides.
+- `isArrivalTime=1` renvoie les derniers itinéraires qui arrivent avant l'heure, triés par
+  départ.
+- Horizon : les horaires sont publiés environ trois mois à l'avance (le 12 janvier 2027 ne
+  renvoie rien le 14 octobre 2026) ; le choix du jour est donc limité à 30 jours.
 
 Mapping vers le domaine :
 
@@ -217,19 +289,22 @@ interroger le serveur.
 
 1. Arrêts candidats : les 3 arrêts TPG les plus proches (index local) à moins de 800 m ;
    à défaut, le plus proche à moins de 2 km.
-2. Une requête `connections` par candidat, en parallèle, à partir de « maintenant + marche »
-   (inutile de proposer un départ qu'on n'atteindra pas). 4 itinéraires par candidat.
+2. Une requête `connections` par candidat, en parallèle, à partir de « maintenant (ou heure
+   choisie) + marche » (inutile de proposer un départ qu'on n'atteindra pas). 4 itinéraires
+   par candidat. **Arriver à** : arrivée à l'heure choisie, moins la marche finale quand
+   l'arrivée est ma position.
 3. Ajout de l'étape à pied, **estimée** : distance à vol d'oiseau × 1,3 (détour), à 80 m/min
    (~4,8 km/h), arrondie à la minute supérieure. Si la source commence elle-même par une
    marche, les deux sont fusionnées.
-4. Option « à pied » si l'autre extrémité est à moins de 800 m ; elle retire les itinéraires
-   qui ne sont pas plus rapides qu'elle.
+4. Option « à pied » si l'autre extrémité est à moins de 800 m, partant à l'heure demandée (ou
+   y arrivant) ; elle retire les itinéraires qui ne sont pas plus rapides qu'elle.
 5. Tri et filtrage :
    - mêmes courses prises à deux arrêts voisins → on garde celle qui arrive le plus tôt, puis
      qui part le plus tard ;
    - on retire les itinéraires **dominés** (partir plus tôt pour arriver plus tard, avec
      autant de changements ou plus) ;
-   - on retire les départs passés de plus de 30 s ; tri par départ, 6 au maximum.
+   - on retire les départs passés de plus de 30 s ; tri par départ, 6 au maximum : les
+     premiers, ou les derniers pour **Arriver à** (au plus près de l'heure d'arrivée).
 
 Même logique, en miroir, quand l'arrivée est ma position. Si une partie des requêtes échoue,
 on renvoie celles qui ont abouti ; si toutes échouent, l'erreur remonte.
@@ -270,7 +345,9 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 
 ## Limites actuelles
 
-- Départ immédiat uniquement : pas encore de « Partir à… » / « Arriver à… » ni de « Plus tard ».
+- Pas de « Plus tôt » / « Plus tard » : 6 itinéraires autour de l'heure demandée.
+- Heure planifiée limitée à 30 jours (horizon des horaires publiés par la source).
+- Itinéraire planifié depuis « Ma position » : c'est la position actuelle qui sert de départ.
 - « Suivre » limité aux lignes TPG.
 - Retour du suivi au détail : la feuille de détail est rouverte (les arrêts dépliés sont
   repliés).
@@ -284,8 +361,7 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 
 1. Raccourci ⤳ dans les résultats de la recherche : bouton secondaire par ligne (pattern
    combobox à grille, ←→ entre l'arrêt et le bouton).
-2. Choix de l'heure (`date`/`time`/`isArrivalTime` de la source) ; « Plus tard » (`page`) ;
-   itinéraires récents.
+2. « Plus tôt » / « Plus tard » (`page` de la source) ; itinéraires récents.
 3. Couleurs officielles du Léman Express, extraites du GTFS comme pour les lignes TPG.
 4. Itinéraires favoris dans l'onglet Favoris (« Maison → Travail » avec le prochain départ).
 5. Carte dans le détail, chargée à la demande.
@@ -294,20 +370,24 @@ Coût : jusqu'à 3 appels à la source par calcul depuis une position (1 d'arrê
 
 | Fichier | Rôle |
 | --- | --- |
-| `app/itinerary/page.tsx` | lit `?from=&to=`, résout les noms dans l'index |
-| `app/api/connections/route.ts` | validation des paramètres (`here`, `near`, `walk`), en-têtes de cache |
+| `app/itinerary/page.tsx` | lit `?from=&to=` et `depart=` ou `arrive=`, résout les noms dans l'index |
+| `app/api/connections/route.ts` | validation des paramètres (`here`, `near`, `walk`, `at`, `arriveBy`), en-têtes de cache |
 | `lib/walk.ts` | ma position → arrêts candidats et marche estimée, sur l'appareil (bornes partagées) |
 | `lib/itinerary.ts` | appariement des arrêts, étapes à pied, tri (serveur) |
 | `lib/transport.ts` | `getConnections` : appel et mapping de la source (serveur) |
 | `lib/stopIndex.ts` | `getTpgStop`, `nearestTpgStops`, `distanceM` (partagé client/serveur) |
-| `lib/types.ts` | `Endpoint`, `Connection`, `Leg`, `Place`, `ItineraryQuery` |
-| `lib/useConnections.ts` | chargement + actualisation 60 s côté client |
+| `lib/types.ts` | `Endpoint`, `Connection`, `Leg`, `Place`, `PlannedTime`, `ItineraryQuery` |
+| `lib/plannedTime.ts` | heure planifiée : bornes (30 jours), pas de 5 min, libellés, jours proposés, format d'URL |
+| `lib/zurichTime.ts` | heure murale suisse ↔ instant (changements d'heure compris) |
+| `lib/useConnections.ts` | chargement + actualisation 60 s (10 min si planifié à plus d'1 h) côté client |
 | `lib/useStopSearch.ts` | autocomplétion partagée avec la recherche |
 | `lib/useStopShortcuts.ts` | favoris + récents sans doublon |
 | `components/ItineraryScreen.tsx` | écran, états (position, vide, erreurs), URL |
 | `components/RouteFields.tsx` | champs Départ / Arrivée, saisie, inversion |
+| `components/PlannedTimeField.tsx` | ligne « Partir maintenant » et feuille Partir à / Arriver à |
+| `components/Wheel.tsx` | colonne de roue (défilement aimanté, `listbox` accessible) |
 | `components/ConnectionCard.tsx` | une carte de résultat (bouton → détail) |
 | `components/ConnectionSheet.tsx` | feuille de détail : frise, arrêts intermédiaires, « Suivre » |
 | `components/TripSheet.tsx` | suivi d'une étape (`onBack`, `alightId`) |
-| `lib/connectionLabels.ts` | durée, changements, « Partir dans… » |
+| `lib/connectionLabels.ts` | durée, changements, « Partir dans… », « Départ demain » |
 | `components/StopBoard.tsx` | bouton « Y aller » |

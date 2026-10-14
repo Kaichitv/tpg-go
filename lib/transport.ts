@@ -7,6 +7,7 @@
 // source couvre toute la Suisse et plafonne à 10 résultats.
 
 import { searchTpgStops } from "./stopIndex";
+import { zurichWallTime } from "./zurichTime";
 import type {
   Board,
   Connection,
@@ -23,7 +24,6 @@ import type {
 } from "./types";
 
 const BASE = "https://transport.opendata.ch/v1";
-const TZ = "Europe/Zurich";
 
 export class UpstreamError extends Error {
   constructor(
@@ -166,8 +166,10 @@ export async function getTrip(q: TripQuery): Promise<Trip> {
 }
 
 export type ConnectionsOptions = {
-  /** Départs à partir de cette heure plutôt que maintenant. */
+  /** Départs à partir de cette heure plutôt que maintenant (arrivées avant, avec `arriveBy`). */
   at?: Date;
+  /** `at` est l'heure d'arrivée au plus tard : les derniers itinéraires qui y arrivent. */
+  arriveBy?: boolean;
   /** Nombre d'itinéraires demandés (la source peut en renvoyer un peu plus). */
   limit?: number;
 };
@@ -181,13 +183,14 @@ export type ConnectionsOptions = {
 export async function getConnections(
   fromId: string,
   toId: string,
-  { at, limit = 5 }: ConnectionsOptions = {},
+  { at, arriveBy = false, limit = 5 }: ConnectionsOptions = {},
 ): Promise<Connection[]> {
   const params: Record<string, string> = { from: fromId, to: toId, limit: String(limit) };
   if (at) {
-    const [date, time] = zurichDateTime(at).split(" ");
+    const { date, time } = zurichWallTime(at);
     params.date = date;
     params.time = time;
+    if (arriveBy) params.isArrivalTime = "1";
   }
   const data = await get<RawConnections>(`/connections?${qs(params)}`, 30);
   return (data.connections ?? []).map(toConnection).filter((c): c is Connection => c !== null);
@@ -423,15 +426,6 @@ function shift(scheduled: string, delayMin: number | null): string | null {
 
 /** Date au format attendu par la source ("YYYY-MM-DD HH:mm", heure suisse). */
 function zurichDateTime(d: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(d);
-  const p = (t: Intl.DateTimeFormatPartTypes) => parts.find((x) => x.type === t)?.value ?? "";
-  return `${p("year")}-${p("month")}-${p("day")} ${p("hour")}:${p("minute")}`;
+  const { date, time } = zurichWallTime(d);
+  return `${date} ${time}`;
 }

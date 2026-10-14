@@ -3,7 +3,7 @@
 // les types de lib/types.ts — jamais la source tierce.
 
 import type { Suggestion } from "./suggestion";
-import type { Board, ConnectionsResult, Endpoint, Stop, Trip, TripQuery } from "./types";
+import type { Board, ConnectionsResult, Endpoint, PlannedTime, Stop, Trip, TripQuery } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -41,13 +41,25 @@ export function fetchTrip(q: TripQuery, signal?: AbortSignal): Promise<Trip> {
   return getJson<Trip>(`/api/trip?${params}`, signal);
 }
 
-/** Ma position part réduite aux arrêts proches et à la marche (`near`, `walk`), jamais en coordonnées. */
-export function fetchConnections(from: Endpoint, to: Endpoint, signal?: AbortSignal): Promise<ConnectionsResult> {
+/**
+ * Ma position part réduite aux arrêts proches et à la marche (`near`, `walk`), jamais en
+ * coordonnées. `when` : heure planifiée (`at`, `arriveBy`) ; null = partir maintenant.
+ */
+export function fetchConnections(
+  from: Endpoint,
+  to: Endpoint,
+  when: PlannedTime | null,
+  signal?: AbortSignal,
+): Promise<ConnectionsResult> {
   const params = new URLSearchParams({ from: endpointParam(from), to: endpointParam(to) });
   const position = from.kind === "position" ? from : to.kind === "position" ? to : null;
   if (position) {
     params.set("near", position.near.map((s) => `${s.stopId}:${s.walkMin}`).join(","));
     if (position.directWalkMin !== null) params.set("walk", String(position.directWalkMin));
+  }
+  if (when) {
+    params.set("at", when.at);
+    if (when.mode === "arrive") params.set("arriveBy", "1");
   }
   return getJson<ConnectionsResult>(`/api/connections?${params}`, signal);
 }

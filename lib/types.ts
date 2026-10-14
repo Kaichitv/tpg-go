@@ -142,8 +142,11 @@ export type Connection = {
 /** Extrémité choisie dans l'UI : un arrêt, ou la position de l'appareil (localisée au besoin). */
 export type Place = { kind: "position" } | { kind: "stop"; id: string; name: string };
 
-/** Saisie de l'onglet Itinéraire (un champ peut être vide). */
-export type ItineraryQuery = { from: Place | null; to: Place | null };
+/** Itinéraire planifié : partir à `at`, ou arriver au plus tard à `at` (ISO). */
+export type PlannedTime = { mode: "depart" | "arrive"; at: string };
+
+/** Saisie de l'onglet Itinéraire (un champ peut être vide ; `when` null = partir maintenant). */
+export type ItineraryQuery = { from: Place | null; to: Place | null; when: PlannedTime | null };
 
 export type ConnectionsResult = {
   updatedAt: string;

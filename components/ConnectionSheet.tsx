@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CaretDownIcon, PersonSimpleWalkIcon, XIcon } from "@phosphor-icons/react/ssr";
 import { formatDuration, leaveLabel, transfersLabel } from "@/lib/connectionLabels";
 import { getLineColor } from "@/lib/lineColors";
+import { LIVE_AHEAD_MS } from "@/lib/plannedTime";
 import { formatClock } from "@/lib/time";
 import type { Connection, RideLeg, TimePoint } from "@/lib/types";
 import IconButton from "./IconButton";
@@ -154,8 +155,10 @@ function RowItem({
       const vias = Math.max(0, l.stops.length - 2);
       const min = Math.round((ms(at(l.to.time)) - ms(at(l.from.time))) / 60_000);
       const summary = `${travelled} arrêt${travelled > 1 ? "s" : ""} · ${min} min`;
-      // Seules les courses TPG se retrouvent à coup sûr dans les tableaux de passages.
-      const canFollow = l.isTpg && Boolean(l.journey) && ms(at(l.to.time)) > now;
+      // Seules les courses TPG se retrouvent à coup sûr dans les tableaux de passages ;
+      // une course planifiée plus tard (demain…) ne se suit pas encore.
+      const canFollow =
+        l.isTpg && Boolean(l.journey) && ms(at(l.to.time)) > now && ms(at(l.from.time)) - now < LIVE_AHEAD_MS;
       return (
         <li className={grid}>
           <span />
