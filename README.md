@@ -29,7 +29,8 @@ Le service worker n'est enregistré qu'en production (`npm run build && npm star
   signalée comme telle ; seuls les arrêts proches et les minutes de marche partent vers le
   serveur, jamais les coordonnées. Détails : [docs/itinerary.md](docs/itinerary.md).
 - **Réglages** : thème auto / clair / sombre (persisté localement), formulaire de suggestions
-  (texte + nom facultatif, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`), politique de
+  (texte + nom facultatif, transmis sur un salon Discord via `DISCORD_WEBHOOK_URL`, avec appareil,
+  système, navigateur et mode installé ou non, sauf si la case est décochée), politique de
   confidentialité, version et sources.
 - **Confidentialité** (`/privacy`, LPD suisse et RGPD) : coordonnées jamais envoyées, ni compte,
   ni cookies, ni traceurs. Liée depuis les Réglages, les invites « Utiliser ma position » et le
@@ -63,7 +64,7 @@ app/
   api/locations/route.ts    recherche d'arrêts (?q=)
   api/trip/route.ts         suite d'une course (?journey=&line=&stop=<id>&at=<ISO>)
   api/connections/route.ts  itinéraires (?from=&to=, id d'arrêt ou « here » + near=&walk=)
-  api/suggestions/route.ts  POST d'une suggestion { name?, message } → webhook Discord
+  api/suggestions/route.ts  POST d'une suggestion { name?, message, client? } → webhook Discord
   manifest.ts, layout.tsx, globals.css (design system)
 components/                 Card, StickyBar, LineBadge, DepartureRow, Departures, StopSearch,
                             FavStar, TripSheet, FavoriteCard, StatusLine, ItineraryScreen,
@@ -77,6 +78,7 @@ lib/
   tpgStops.json             snapshot committé, généré par scripts/build-tpg-stops.mjs
   api.ts                    fetchers client vers /api/*
   suggestion.ts             validation d'une suggestion (partagée client/serveur)
+  device.ts                 appareil, système et navigateur joints à une suggestion (client)
   discord.ts                envoi des suggestions au webhook Discord (serveur)
   favorites.ts              favoris (localStorage + useSyncExternalStore)
   useBoard.ts               polling 30 s, 15 s si passage < 3 min (visible uniquement), reprise au premier plan

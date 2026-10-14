@@ -3,7 +3,7 @@
 // L'URL du webhook vient de DISCORD_WEBHOOK_URL et n'est jamais exposée au client.
 
 import pkg from "@/package.json";
-import type { Suggestion } from "./suggestion";
+import type { ClientInfo, Suggestion } from "./suggestion";
 
 export class NotConfiguredError extends Error {
   constructor() {
@@ -34,6 +34,7 @@ export async function postSuggestion(s: Suggestion): Promise<void> {
           // Nom facultatif : sans nom, pas d'auteur (Discord refuse un auteur vide).
           ...(s.name ? { author: { name: s.name } } : {}),
           description: s.message,
+          ...(s.client ? { fields: clientFields(s.client) } : {}),
           footer: { text: `TPG Go v${pkg.version}` },
           timestamp: new Date().toISOString(),
         },
@@ -41,4 +42,13 @@ export async function postSuggestion(s: Suggestion): Promise<void> {
     }),
   });
   if (!res.ok) throw new Error(`Discord HTTP ${res.status}`);
+}
+
+/** Appareil, navigateur et mode, côte à côte sous le message. */
+function clientFields(c: ClientInfo) {
+  return [
+    { name: "Appareil", value: c.os ? `${c.device}, ${c.os}` : c.device, inline: true },
+    { name: "Navigateur", value: c.browser, inline: true },
+    { name: "Mode", value: c.installed ? "App installée" : "Navigateur", inline: true },
+  ];
 }

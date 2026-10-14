@@ -4,6 +4,7 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CheckCircleIcon, CircleNotchIcon, PaperPlaneTiltIcon } from "@phosphor-icons/react/ssr";
 import { ApiError, sendSuggestion } from "@/lib/api";
+import { clientLabel, useClientInfo } from "@/lib/device";
 import { MESSAGE_MAX, NAME_MAX, parseSuggestion } from "@/lib/suggestion";
 import Card from "./Card";
 
@@ -31,6 +32,8 @@ export default function SuggestionForm() {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [website, setWebsite] = useState(""); // pot de miel anti-robots
+  const client = useClientInfo();
+  const [attachClient, setAttachClient] = useState(true);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState<"name" | "message" | null>(null);
@@ -38,7 +41,7 @@ export default function SuggestionForm() {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (status === "sending") return;
-    const parsed = parseSuggestion({ name, message });
+    const parsed = parseSuggestion({ name, message, client: attachClient ? client : null });
     if (typeof parsed === "string") {
       setError(parsed);
       setInvalid(name.trim().length > NAME_MAX ? "name" : "message");
@@ -129,6 +132,22 @@ export default function SuggestionForm() {
           className={`${FIELD} resize-y py-2.5 leading-snug`}
         />
       </div>
+
+      {/* Ce qui est joint est affiché tel quel : on peut le retirer (cf. /privacy#suggestions). */}
+      {client && (
+        <label className="flex min-h-11 items-start gap-3 px-1 py-1">
+          <input
+            type="checkbox"
+            checked={attachClient}
+            onChange={(e) => setAttachClient(e.target.checked)}
+            className="mt-0.5 size-5 shrink-0 accent-accent"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[15px] leading-snug">Joindre mon appareil et mon navigateur</span>
+            <span className="text-[13px] leading-snug text-muted">{clientLabel(client)}. Aide à reproduire un bug.</span>
+          </span>
+        </label>
+      )}
 
       {/* Invisible et hors tabulation : seuls les robots le remplissent. */}
       <div aria-hidden className="sr-only">

@@ -100,6 +100,12 @@ export default function PrivacyPage() {
         </p>
         <List>
           <li>Le message est transmis au développeur dans un salon Discord, sans être publié.</li>
+          <li>
+            Si tu laisses cochée la case prévue, il est accompagné du type d’appareil (par exemple iPhone), du système
+            et du navigateur avec leurs versions, et du mode d’utilisation (app installée ou navigateur), affichés
+            dans le formulaire avant l’envoi. Ces informations aident à reproduire un bug. Elles ne comprennent ni le
+            modèle exact de l’appareil ni aucun identifiant.
+          </li>
           <li>Il est supprimé une fois traité, et au plus tard après 12 mois.</li>
           <li>
             Pour limiter les abus, ton adresse IP est gardée en mémoire vive 10 minutes au plus. Elle n’est jamais
@@ -107,8 +113,8 @@ export default function PrivacyPage() {
           </li>
         </List>
         <p>
-          Base légale : ton consentement (l’envoi est volontaire) et, pour l’anti-abus, l’intérêt légitime à protéger
-          le service.
+          Base légale : ton consentement (l’envoi est volontaire) ; l’intérêt légitime à corriger les bugs pour les
+          informations sur l’appareil, que tu peux décocher, et à protéger le service pour l’anti-abus.
         </p>
       </Part>
 

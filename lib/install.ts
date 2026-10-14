@@ -37,7 +37,7 @@ const STANDALONE_QUERY = "(display-mode: standalone)";
 
 const listeners = new Set<() => void>();
 
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   return window.matchMedia(STANDALONE_QUERY).matches || navigator.standalone === true;
 }
 
